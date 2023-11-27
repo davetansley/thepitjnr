@@ -2,45 +2,14 @@
 ----------------------------------------------------------------
 --screen
 ----------------------------------------------------------------
-function drawscreen()
-    cls()
 
-    -- draw map and set camera
-    map(0,0,0,8,16,24)
-    camera(0,view.y)
-
-    -- draw digs
-    drawdigs()
-
-    -- draw rocks
-    drawrocks()
-
-    -- draw bombs
-    drawbombs()
-
-    -- draw diamonds
-    drawdiamonds()
-
-    -- draw player
-    spr(p.sprite,p.x,p.y)
-
-    -- if player is digging, draw effect
-    if p.activity==1 and p.activityframes>0 then flashsquare(p.dir) end
-
-    -- score panel
-    drawscorepanel()
-
-    -- zonk text
-    drawzonk()
-
-    --printdebug()
-end
 
 -- Initialises the dig
 function initdirtarray()
     for y = 1, 192 do 
         digarray[y]={}
-        for x = 1, 128 do 
+        -- Include an extra on to say that the line has values
+        for x = 1, 129 do 
             digarray[y][x]=0
         end
     end
@@ -88,8 +57,11 @@ end
 
 function drawdigs()
     for y = 1+view.y, 120+view.y do 
-        for x = 8, 120 do 
-            if digarray[y][x]==1 then pset(x,y,0) end
+        if digarray[y][129]==1 
+        then
+            for x = 8, 120 do 
+                if digarray[y][x]==1 then pset(x,y,0) end
+            end
         end
     end
 end
@@ -128,12 +100,13 @@ end
 function checkcamera()
 
     -- check for need to reset camera
-    if p.y>=88 and view.y==0 then view.y=72 end
-    if p.y<=80 and view.y==72 then view.y=0 end
+    if p.y>=96 and view.y==0 then view.y=72 end
+    if p.y<=88 and view.y==72 then view.y=0 end
 
 end
 
 function showgameover()
+    printh("game over")
     cls()
     print("Game over!")
 end

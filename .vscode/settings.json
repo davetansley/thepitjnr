@@ -1,3 +1,11 @@
 {
-    
+    "medius.runonsave": {
+        "commands": [
+            {
+                "match": "src/.*.lua",
+                "isAsync": true,
+                "cmd": "cat ${workspaceRoot}/src/*.lua > ${workspaceRoot}/main.lua"
+            }			
+        ]
+    }
 }

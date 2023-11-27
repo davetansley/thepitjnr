@@ -12,9 +12,38 @@ function loselife()
         showgameover()
     else
         initlife()
+
+        --New stuff
+        initialise_game()
     end
     
 
+end
+
+-- check for player in the range specified
+-- return 1 if found, 0 if not
+function checkforplayer(x1,x2,y1,y2)
+    if x1 < p.x+8 and p.x <= x2 and y1 < p.y+8 and p.y <= y2
+         then
+            return 1
+        end           
+    return 0
+end
+
+function killplayer(killedby)
+    if p.activity<3
+    then
+        if killedby=="rock"
+        then 
+            p.activity=3
+            p.activityframes=30      
+        end 
+        if killedby=="bomb"
+        then
+            p.activity=4
+            p.activityframes=30
+        end
+    end
 end
 
 --check what the player is doing
@@ -166,6 +195,8 @@ function trytodig(dir,checkonly)
                         else
                             -- Otherwise, this is a dirt pixel, so set it to 1 in the dirt array
                             digarray[y][x]=1
+                            -- Mark the line as dirty
+                            digarray[y][129]=1
                         end
                 end
         end
