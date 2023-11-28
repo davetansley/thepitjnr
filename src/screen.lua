@@ -3,6 +3,27 @@
 --screen
 ----------------------------------------------------------------
 
+-- Walk the map and replace any entity sprites
+function populate_map()
+    for y = 0,23 do
+        for x = 0,15 do
+            local sprite = mget(x,y)
+            if sprite==71 -- rock
+            then
+                mset(x,y,0)
+                add_rock(x,y+1)
+            elseif sprite==73 -- bomb
+            then
+                mset(x,y,0)
+                add_bomb(x,y+1)
+            elseif sprite==75 -- diamond
+            then
+                mset(x,y,0)
+                add_diamond(x,y+1)
+            end 
+        end
+    end
+end
 
 -- Initialises the dig
 function initdirtarray()
@@ -17,42 +38,6 @@ end
 
 function drawzonk()
     if p.activity==4 then print("ZONK!!", p.x-8,p.y,7) end
-end
-
-function drawrocks()
-    local count=#currentrockarray
-    for x=1,count do 
-        local rock=currentrockarray[x]        
-        
-        rectfill(rock[1], rock[2], rock[1]+7, rock[2]+7, 0)    
-
-        spr(rock[4],rock[1],rock[2])        
-    end
-end
-
-function drawbombs()
-    local count=#currentbombarray
-    for x=1,count do 
-        local bomb=currentbombarray[x]
-        
-        spr(bomb[4],bomb[1],bomb[2])
-        
-    end
-end
-
-function drawdiamonds()
-    local count=#currentdiamondarray
-    for x=1,count do 
-        local diamond=currentdiamondarray[x]
-        
-        if diamond[6] == 0
-            then
-            spr(diamond[4]+diamond[5],diamond[1],diamond[2])
-
-            currentdiamondarray[x][5]+=1
-            if currentdiamondarray[x][5]>2 then currentdiamondarray[x][5]=0 end
-            end
-    end
 end
 
 function drawdigs()

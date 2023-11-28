@@ -1,11 +1,16 @@
 function initialise_game()
+
     local level = levels[1]
     
-    -- Populate rocks
+    -- reload the map
+    reload(0x1000, 0x1000, 0x2000)
+
+    -- Populate entities
     rocks={}
-    for i=1,#level.rocks,2 do
-        add_rock(level.rocks[i],level.rocks[i+1])
-    end
+    bombs={}
+    diamonds={}
+
+    populate_map()
 end-- Collections of objects
 rocks={}
 diamonds={}
@@ -20,13 +25,13 @@ function add_rock(colx,coly)
         state = "idle",
         time = 0,
         preparingtime=30,
+        type="rock",
         draw = function(self)
-            rectfill(self.x, self.y, self.x+7, self.y+7, 0)    
             spr(self.sprite,self.x,self.y)   
         end,
         update = function(self)
-            update_faller(self, "rock")
-            check_kill(self, "rock")
+            update_faller(self, self.type)
+            check_kill(self, self.type)
         end, 
         anims = {
             framecount=0,
@@ -38,6 +43,66 @@ function add_rock(colx,coly)
             idle={fr=1,71},
             preparing={fr=1,71,72},
             falling={fr=1,71}
+        }
+    })
+
+end
+
+function add_bomb(colx,coly)
+    add(bombs, {
+        x = colx*8,
+        y = coly*8,
+        sprite = 73,
+        state = "idle",
+        time = 0,
+        preparingtime=30,
+        type="bomb",
+        draw = function(self)
+            spr(self.sprite,self.x,self.y)   
+        end,
+        update = function(self)
+            if p.incavern==0 then return end
+            update_faller(self, self.type)
+            check_kill(self, self.type)
+        end, 
+        anims = {
+            framecount=0,
+            animindex=1,
+            reset = function(self)
+                self.framecount=1
+                self.animindex=1
+            end,
+            idle={fr=1,73},
+            preparing={fr=1,73,74},
+            falling={fr=1,73}
+        }
+    })
+
+end
+
+function add_diamond(colx,coly)
+    add(diamonds, {
+        x = colx*8,
+        y = coly*8,
+        sprite = 75,
+        state = "idle",
+        time = 0,
+        type="diamond",
+        draw = function(self)
+            self.anims.framecount+=1
+            self.anims.animindex = (self.anims.animindex % #self.anims[self.state]) + 1
+            self.sprite =  self.anims[self.state][self.anims.animindex]
+            spr(self.sprite,self.x,self.y)   
+        end,
+        anims = {
+            framecount=0,
+            animindex=1,
+            reset = function(self)
+                self.framecount=1
+                self.animindex=1
+            end,
+            idle={fr=1,75,76,77},
+            collected={fr=1,0}
         }
     })
 
@@ -125,9 +190,6 @@ end
 levels={
     {
         level=1,
-        rocks=split("4,4,6,6,5,9,6,9,7,10,10,10,11,10,9,9,11,7,7,13,5,14,9,15,3,21,1,16"),
-        bombs=split("5,15,6,15,7,15,8,15,9,15,10,15"),
-        diamonds=split("5,13,7,13,8,13,10,13"),
         caverncoords={{40,160},{80,184}},
         pitcoords={{8,72},{32,104}},    
     }
@@ -293,8 +355,10 @@ function _update()
         r:update()
     end
 
-    --checkrocks()
-    checkbombs()
+    for r in all(bombs) do
+        r:update()
+    end
+
     checkplayer()
     checklocation()
     checkcamera()
@@ -309,7 +373,7 @@ function _draw()
     -- draw map and set camera
     map(0,0,0,8,16,24)
     camera(0,view.y)
-    
+
     -- draw digs
     drawdigs()
 
@@ -317,12 +381,14 @@ function _draw()
     for r in all(rocks) do
         r:draw()
     end
-    
-    -- draw bombs
-    drawbombs()
 
-    -- draw diamonds
-    drawdiamonds()
+    for r in all(bombs) do
+        r:draw()
+    end
+
+    for r in all(diamonds) do
+        r:draw()
+    end
 
     -- draw player
     spr(p.sprite,p.x,p.y)
@@ -629,6 +695,27 @@ end
 --screen
 ----------------------------------------------------------------
 
+-- Walk the map and replace any entity sprites
+function populate_map()
+    for y = 0,23 do
+        for x = 0,15 do
+            local sprite = mget(x,y)
+            if sprite==71 -- rock
+            then
+                mset(x,y,0)
+                add_rock(x,y+1)
+            elseif sprite==73 -- bomb
+            then
+                mset(x,y,0)
+                add_bomb(x,y+1)
+            elseif sprite==75 -- diamond
+            then
+                mset(x,y,0)
+                add_diamond(x,y+1)
+            end 
+        end
+    end
+end
 
 -- Initialises the dig
 function initdirtarray()
@@ -643,42 +730,6 @@ end
 
 function drawzonk()
     if p.activity==4 then print("ZONK!!", p.x-8,p.y,7) end
-end
-
-function drawrocks()
-    local count=#currentrockarray
-    for x=1,count do 
-        local rock=currentrockarray[x]        
-        
-        rectfill(rock[1], rock[2], rock[1]+7, rock[2]+7, 0)    
-
-        spr(rock[4],rock[1],rock[2])        
-    end
-end
-
-function drawbombs()
-    local count=#currentbombarray
-    for x=1,count do 
-        local bomb=currentbombarray[x]
-        
-        spr(bomb[4],bomb[1],bomb[2])
-        
-    end
-end
-
-function drawdiamonds()
-    local count=#currentdiamondarray
-    for x=1,count do 
-        local diamond=currentdiamondarray[x]
-        
-        if diamond[6] == 0
-            then
-            spr(diamond[4]+diamond[5],diamond[1],diamond[2])
-
-            currentdiamondarray[x][5]+=1
-            if currentdiamondarray[x][5]>2 then currentdiamondarray[x][5]=0 end
-            end
-    end
 end
 
 function drawdigs()

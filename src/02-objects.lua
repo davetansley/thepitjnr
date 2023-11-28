@@ -12,13 +12,13 @@ function add_rock(colx,coly)
         state = "idle",
         time = 0,
         preparingtime=30,
+        type="rock",
         draw = function(self)
-            rectfill(self.x, self.y, self.x+7, self.y+7, 0)    
             spr(self.sprite,self.x,self.y)   
         end,
         update = function(self)
-            update_faller(self, "rock")
-            check_kill(self, "rock")
+            update_faller(self, self.type)
+            check_kill(self, self.type)
         end, 
         anims = {
             framecount=0,
@@ -30,6 +30,66 @@ function add_rock(colx,coly)
             idle={fr=1,71},
             preparing={fr=1,71,72},
             falling={fr=1,71}
+        }
+    })
+
+end
+
+function add_bomb(colx,coly)
+    add(bombs, {
+        x = colx*8,
+        y = coly*8,
+        sprite = 73,
+        state = "idle",
+        time = 0,
+        preparingtime=30,
+        type="bomb",
+        draw = function(self)
+            spr(self.sprite,self.x,self.y)   
+        end,
+        update = function(self)
+            if p.incavern==0 then return end
+            update_faller(self, self.type)
+            check_kill(self, self.type)
+        end, 
+        anims = {
+            framecount=0,
+            animindex=1,
+            reset = function(self)
+                self.framecount=1
+                self.animindex=1
+            end,
+            idle={fr=1,73},
+            preparing={fr=1,73,74},
+            falling={fr=1,73}
+        }
+    })
+
+end
+
+function add_diamond(colx,coly)
+    add(diamonds, {
+        x = colx*8,
+        y = coly*8,
+        sprite = 75,
+        state = "idle",
+        time = 0,
+        type="diamond",
+        draw = function(self)
+            self.anims.framecount+=1
+            self.anims.animindex = (self.anims.animindex % #self.anims[self.state]) + 1
+            self.sprite =  self.anims[self.state][self.anims.animindex]
+            spr(self.sprite,self.x,self.y)   
+        end,
+        anims = {
+            framecount=0,
+            animindex=1,
+            reset = function(self)
+                self.framecount=1
+                self.animindex=1
+            end,
+            idle={fr=1,75,76,77},
+            collected={fr=1,0}
         }
     })
 

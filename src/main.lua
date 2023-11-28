@@ -13,8 +13,10 @@ function _update()
         r:update()
     end
 
-    --checkrocks()
-    checkbombs()
+    for r in all(bombs) do
+        r:update()
+    end
+
     checkplayer()
     checklocation()
     checkcamera()
@@ -29,7 +31,7 @@ function _draw()
     -- draw map and set camera
     map(0,0,0,8,16,24)
     camera(0,view.y)
-    
+
     -- draw digs
     drawdigs()
 
@@ -37,12 +39,14 @@ function _draw()
     for r in all(rocks) do
         r:draw()
     end
-    
-    -- draw bombs
-    drawbombs()
 
-    -- draw diamonds
-    drawdiamonds()
+    for r in all(bombs) do
+        r:draw()
+    end
+
+    for r in all(diamonds) do
+        r:draw()
+    end
 
     -- draw player
     spr(p.sprite,p.x,p.y)
