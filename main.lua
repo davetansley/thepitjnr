@@ -17,10 +17,24 @@ function _draw()
     game:draw()
     printdebug()
 end
+
+scores={
+    diamond=10
+}
+
 game = {
     level={},
     init = function (self)
-        initialise_game()
+        -- config variables
+        game.level = levels[1]
+
+        player:init()
+        
+        -- viewport variables
+        view={}
+        view.y=0 -- key for tracking the viewport
+
+        self.reset()
     end,
     update = function(self)
         for r in all(rocks) do
@@ -56,6 +70,21 @@ game = {
         screen:draw_scores()
 
         player:draw()
+    end,
+    reset = function ()
+        
+        view.y=0
+    
+        -- reload the map
+        reload(0x1000, 0x1000, 0x2000)
+    
+        -- Populate entities
+        rocks={}
+        bombs={}
+        diamonds={}
+    
+        screen:init()
+    
     end
 
 }
@@ -153,45 +182,8 @@ function clear_dirt(dirt,offset,clearbottom)
     return temp   
 end
 
-function initialise_game()
 
-    -- config variables
-    score={}
-    score.diamond=10
 
-    game.level = levels[1]
-
-    player:init()
-    
-    -- viewport variables
-    view={}
-    view.y=0 -- key for tracking the viewport
-
-    -- general variables
-    animframes=6
-
-    caverncoords={{40,160},{80,184}}
-    pitcoords={{8,72},{32,104}}
-
-    initlife()
-end
-
--- Reset after life is lost
-function initlife()
-    
-    view.y=0
-
-    -- reload the map
-    reload(0x1000, 0x1000, 0x2000)
-
-    -- Populate entities
-    rocks={}
-    bombs={}
-    diamonds={}
-
-    screen:init()
-
-end
 
 
 screen = {
@@ -218,6 +210,8 @@ screen = {
         print("ZONK!!", player.x-8,player.y+2,7)
     end,
     draw_scores = function(self)
+        rectfill(1,1+view.y,42,7+view.y,1)
+        rectfill(90,1+view.y,126,7+view.y,1)
         print("score "..padnumber(player.score),2,2+view.y,7)
         print("high "..padnumber(player.highscore), 91,2+view.y,7)
     end
@@ -324,6 +318,7 @@ player={
         self.activityframes=0 -- key for frames in current activity
         self.incavern=0 -- key for whether player is in the diamond cavern
         self.inpit=0 -- key for whether player is in the pit
+        self.animframes=3 -- key for the number of frames an animation frame has
     end,
     update=function(self)
         update_player()
@@ -416,10 +411,8 @@ function loselife()
         -- gameover
         showgameover()
     else
-        initlife()
-
-        --New stuff
-        initialise_game()
+        player:init()
+        game.reset()
     end
     
 
@@ -505,7 +498,8 @@ function checkforgem(dir)
                 and diamond.y >= coords[3] and diamond.y <= coords[4]
                 then
                     diamond.state = entity_states.invisible
-                    addscore(score.diamond)
+                    addscore(scores.diamond)
+                    sfx(0)
                     return 1
                 end            
             end
@@ -520,6 +514,7 @@ function trytodig(dir)
     if check_for_dirt(coords[1], coords[3], coords[2], coords[4])==1
     then
         dig_dirt(coords[1], coords[3], coords[2], coords[4])
+        sfx(1)
 
         -- Update this later to just set the player state - anims handled in draw
         if player.activity==0 then 
@@ -596,7 +591,7 @@ function move(x,y,s1,s2,d,auto)
             player.framecount=0 
         else 
             -- reset or increment
-            if player.framecount==animframes then player.framecount = 0 else player.framecount+=1 end 
+            if player.framecount==player.animframes then player.framecount = 0 else player.framecount+=1 end 
     end
 
     -- flip frame if needed
@@ -652,6 +647,7 @@ entity_states={
     falling="falling",
     invisible="invisible"
 }
+
 entity_types={
     rock=0,
     bomb=1,

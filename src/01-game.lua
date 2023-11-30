@@ -1,7 +1,21 @@
+
+scores={
+    diamond=10
+}
+
 game = {
     level={},
     init = function (self)
-        initialise_game()
+        -- config variables
+        game.level = levels[1]
+
+        player:init()
+        
+        -- viewport variables
+        view={}
+        view.y=0 -- key for tracking the viewport
+
+        self.reset()
     end,
     update = function(self)
         for r in all(rocks) do
@@ -37,6 +51,21 @@ game = {
         screen:draw_scores()
 
         player:draw()
+    end,
+    reset = function ()
+        
+        view.y=0
+    
+        -- reload the map
+        reload(0x1000, 0x1000, 0x2000)
+    
+        -- Populate entities
+        rocks={}
+        bombs={}
+        diamonds={}
+    
+        screen:init()
+    
     end
 
 }
@@ -134,44 +163,7 @@ function clear_dirt(dirt,offset,clearbottom)
     return temp   
 end
 
-function initialise_game()
 
-    -- config variables
-    score={}
-    score.diamond=10
 
-    game.level = levels[1]
-
-    player:init()
-    
-    -- viewport variables
-    view={}
-    view.y=0 -- key for tracking the viewport
-
-    -- general variables
-    animframes=6
-
-    caverncoords={{40,160},{80,184}}
-    pitcoords={{8,72},{32,104}}
-
-    initlife()
-end
-
--- Reset after life is lost
-function initlife()
-    
-    view.y=0
-
-    -- reload the map
-    reload(0x1000, 0x1000, 0x2000)
-
-    -- Populate entities
-    rocks={}
-    bombs={}
-    diamonds={}
-
-    screen:init()
-
-end
 
 

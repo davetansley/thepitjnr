@@ -15,6 +15,7 @@ player={
         self.activityframes=0 -- key for frames in current activity
         self.incavern=0 -- key for whether player is in the diamond cavern
         self.inpit=0 -- key for whether player is in the pit
+        self.animframes=3 -- key for the number of frames an animation frame has
     end,
     update=function(self)
         update_player()
@@ -107,10 +108,8 @@ function loselife()
         -- gameover
         showgameover()
     else
-        initlife()
-
-        --New stuff
-        initialise_game()
+        player:init()
+        game.reset()
     end
     
 
@@ -196,7 +195,8 @@ function checkforgem(dir)
                 and diamond.y >= coords[3] and diamond.y <= coords[4]
                 then
                     diamond.state = entity_states.invisible
-                    addscore(score.diamond)
+                    addscore(scores.diamond)
+                    sfx(0)
                     return 1
                 end            
             end
@@ -211,6 +211,7 @@ function trytodig(dir)
     if check_for_dirt(coords[1], coords[3], coords[2], coords[4])==1
     then
         dig_dirt(coords[1], coords[3], coords[2], coords[4])
+        sfx(1)
 
         -- Update this later to just set the player state - anims handled in draw
         if player.activity==0 then 
@@ -287,7 +288,7 @@ function move(x,y,s1,s2,d,auto)
             player.framecount=0 
         else 
             -- reset or increment
-            if player.framecount==animframes then player.framecount = 0 else player.framecount+=1 end 
+            if player.framecount==player.animframes then player.framecount = 0 else player.framecount+=1 end 
     end
 
     -- flip frame if needed

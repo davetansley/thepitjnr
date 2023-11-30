@@ -22,6 +22,8 @@ screen = {
         print("ZONK!!", player.x-8,player.y+2,7)
     end,
     draw_scores = function(self)
+        rectfill(1,1+view.y,42,7+view.y,1)
+        rectfill(90,1+view.y,126,7+view.y,1)
         print("score "..padnumber(player.score),2,2+view.y,7)
         print("high "..padnumber(player.highscore), 91,2+view.y,7)
     end

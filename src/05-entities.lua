@@ -10,6 +10,7 @@ entity_states={
     falling="falling",
     invisible="invisible"
 }
+
 entity_types={
     rock=0,
     bomb=1,
