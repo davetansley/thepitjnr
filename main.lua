@@ -1,316 +1,174 @@
-function initialise_game()
+-- init
+function _init()
+    game:init()
+    screen:init()
+end
 
-    local level = levels[1]
+-- update
+function _update()
     
-    -- reload the map
-    reload(0x1000, 0x1000, 0x2000)
-
-    -- Populate entities
-    rocks={}
-    bombs={}
-    diamonds={}
-
-    populate_map()
-end-- Collections of objects
-rocks={}
-diamonds={}
-gems={}
-bombs={}
-
-function add_rock(colx,coly)
-    add(rocks, {
-        x = colx*8,
-        y = coly*8,
-        sprite = 71,
-        state = "idle",
-        time = 0,
-        preparingtime=30,
-        type="rock",
-        draw = function(self)
-            spr(self.sprite,self.x,self.y)   
-        end,
-        update = function(self)
-            update_faller(self, self.type)
-            check_kill(self, self.type)
-        end, 
-        anims = {
-            framecount=0,
-            animindex=1,
-            reset = function(self)
-                self.framecount=1
-                self.animindex=1
-            end,
-            idle={fr=1,71},
-            preparing={fr=1,71,72},
-            falling={fr=1,71}
-        }
-    })
+    game:update()
 
 end
 
-function add_bomb(colx,coly)
-    add(bombs, {
-        x = colx*8,
-        y = coly*8,
-        sprite = 73,
-        state = "idle",
-        time = 0,
-        preparingtime=30,
-        type="bomb",
-        draw = function(self)
-            spr(self.sprite,self.x,self.y)   
-        end,
-        update = function(self)
-            if p.incavern==0 then return end
-            update_faller(self, self.type)
-            check_kill(self, self.type)
-        end, 
-        anims = {
-            framecount=0,
-            animindex=1,
-            reset = function(self)
-                self.framecount=1
-                self.animindex=1
-            end,
-            idle={fr=1,73},
-            preparing={fr=1,73,74},
-            falling={fr=1,73}
-        }
-    })
+-- draw
+function _draw()
 
+    game:draw()
+    printdebug()
 end
-
-function add_diamond(colx,coly)
-    add(diamonds, {
-        x = colx*8,
-        y = coly*8,
-        sprite = 75,
-        state = "idle",
-        time = 0,
-        type="diamond",
-        draw = function(self)
-            self.anims.framecount+=1
-            self.anims.animindex = (self.anims.animindex % #self.anims[self.state]) + 1
-            self.sprite =  self.anims[self.state][self.anims.animindex]
-            spr(self.sprite,self.x,self.y)   
-        end,
-        anims = {
-            framecount=0,
-            animindex=1,
-            reset = function(self)
-                self.framecount=1
-                self.animindex=1
-            end,
-            idle={fr=1,75,76,77},
-            collected={fr=1,0}
-        }
-    })
-
-end
-
-function check_kill(faller, type)
-    
-    if faller.state!="falling" then return end
-
-    local coords = getadjacentspaces(3, 0, faller.x, faller.y)
-    if checkforplayer(coords[1],coords[2],coords[3],coords[4])==1 
-    then 
-        killplayer(type) 
-    end
-    
-end
-
-function update_faller(faller, type)
-    -- check below for space to fall
-    local canfall=checkcanfall(faller.x, faller.y) 
---printh(""..faller.state.." "..faller.anims.framecount)
-    if type=="bomb" and faller.state=="falling"
-    then
-        -- for bombs, check random number
-        local rand=rnd(100)
-        if rand>1 then cantfall=2 end
-    end
-
-    if canfall==1 and p.activity<3 
-    then
-        if faller.state=="falling"
-        then
-            -- actually falling
-            faller.y+=1
-        elseif faller.state=="preparing"
-        then
-            faller.time+=1
-            if faller.time >= faller.preparingtime 
-            then
-                faller.state="falling"
-            end
-        elseif faller.state=="idle" 
-        then 
-            faller.state="preparing"
-            faller.time=0 
-            faller.anims:reset()
+game = {
+    level={},
+    init = function (self)
+        initialise_game()
+    end,
+    update = function(self)
+        for r in all(rocks) do
+            r:update()
         end
-        
-        -- update sprite
-        faller.anims.framecount+=1
-        faller.anims.animindex = (faller.anims.animindex % #faller.anims[faller.state]) + 1
-        faller.sprite =  faller.anims[faller.state][faller.anims.animindex]
-    else
-        faller.state="idle"
-        faller.anims:reset()
-    end
     
-end
+        for r in all(bombs) do
+            r:update()
+        end
+    
+        for r in all(diamonds) do
+            r:update()
+        end
+    
+        player:update()
+        screen:update()
+    end,
+    draw = function (self)
+        screen:draw()
 
--- check a range of pixels that the rock is about to move into
--- if can't fall return 0
--- if can fall return 1
-function checkcanfall(x,y) 
-    -- only check if faller is visible
-    if view.y == 0 and y >= 120 then return 0 end
-    if view.y > 0 and y < 72 then return 0 end
+        for r in all(rocks) do
+            r:draw()
+        end
 
-    local coords = getadjacentspaces(3, 0, x, y)
+        for r in all(bombs) do
+            r:draw()
+        end
 
-    -- check for an overlap with the player top line
-    if coords[2] >= p.x and p.x+7 >= coords[1] and p.y == coords[3]
-    then
-        return 1
+        for r in all(diamonds) do
+            r:draw()
+        end
+
+        screen:draw_scores()
+
+        player:draw()
     end
 
-    for x=coords[1],coords[2] do 
-        local pixelc = pget(x,coords[3])
-        -- Not blank or dirt, so can't fall
-        if pixelc != 0 then return 0 end        
-    end
-
-    return 1
-end
-
-levels={
-    {
-        level=1,
-        caverncoords={{40,160},{80,184}},
-        pitcoords={{8,72},{32,104}},    
-    }
 }
-----------------------------------------------------------------
---fall management
-----------------------------------------------------------------
-function checkrocks()
-    checkfallers(currentrockarray,1)
+
+-- check for a dirt tile in the range specified
+-- return 1 if dirt is found
+function check_for_dirt(x1,y1,x2,y2)
+
+    -- convert pixel coords to cells
+    local coords = box_coords_to_cells(x1,y1,x2,y2)
+    
+    -- get the top tile
+    local tile1 = screen.tiles[coords[2]][coords[1]]
+
+    local offset1 = y1 % 8
+    local offset2 = (y2+1) % 8
+
+    -- if this is dirt and it still has dirt
+    if tile1.sprite==70 and has_dirt(tile1,offset1,1)==1 then return 1 end
+
+    -- if this cell doesn't spill over, exit
+    if offset1==0 then return 0 end
+
+    -- get the second tile
+    local tile2 = screen.tiles[coords[4]][coords[3]]
+ 
+    -- if this is dirt and it still has dirt
+    if tile2.sprite==70 and has_dirt(tile2,offset2,0)==1 then return 1 end
+    
+    return 0
 end
 
-function checkbombs()
-    if p.incavern==0 then return end
-
-    checkfallers(currentbombarray,2)
-end
-
--- checks an array of fallers to see if they should fall
--- type: 1 rock, 2 bomb
-function checkfallers(fallerarray,type)
-    local count=#fallerarray
-    for x=1,count do 
-        local faller=fallerarray[x]    
-        -- check below for space to fall
-        local cantfall=checkcanfall(faller[1], faller[2]) 
-
-        if type==2 and faller[3]==0
-        then
-            -- for bombs, check random number
-            local rand=rnd(100)
-            if rand>1 then cantfall=2 end
-        end
-
-        if cantfall==1 and faller[3]==1 -- has struck a player and faller is falling
-            then
-                if type==1 
-                then 
-                    p.activity=3
-                    p.activityframes=30      
-                else
-                    p.activity=4
-                    p.activityframes=30
-                end
-            end
-
-        if cantfall<2 and p.activity<3 
-            then
-                if faller[3]==0 
-                then 
-                    if type==1 then faller[3]=30 end
-                    if type==2 then faller[3]=15 end 
-                end 
-
-                if faller[3]==1 
-                    then
-                        -- actually falling
-                        faller[2]+=1
-
-                    else
-                        faller[3]-=1 -- decrease state by one
-                        if type==1
-                        then
-                            if faller[4]==71 then faller[4]=72 else faller[4]=71 end
-                        end 
-
-                        if type==2
-                        then
-                            faller[4]=74
-                        end 
-
-                    end
-            else
-                faller[3]=0
-            end
-        
+-- Check for dirt in the tile 
+-- Basically, look for a 1 in the .dirt property after or before the offset
+function has_dirt(tile, offset, afteroffset)
+    
+    for d = 1, #tile.dirt do 
+        if sub(tile.dirt,d,d)=="1" and afteroffset==1 and d>offset then return 1 end
+        if sub(tile.dirt,d,d)=="1" and afteroffset==0 and d<=offset then return 1 end
     end
+
+    return 0
 end
 
--------------------------------------------
--- inits
--------------------------------------------
-function initgame()
+-- clear dirt in range specified
+function dig_dirt(x1,y1,x2,y2)
+    -- convert pixel coords to cells
+    local coords = box_coords_to_cells(x1,y1,x2,y2)
+    
+    -- get the top tile
+    local tile1 = screen.tiles[coords[2]][coords[1]]
+    local offset1 = y1 % 8
+    local offset2 = (y2+1) % 8
+    
+    if tile1.sprite==70 
+    then
+        tile1.dirt=clear_dirt(tile1.dirt,offset1,1)
+        tile1.dirty=1
+    end 
+    
+    if offset1==0 then return end 
+
+    -- get the bottom tile
+    local tile2 = screen.tiles[coords[4]][coords[3]]
+    if tile2.sprite==70 
+    then
+        tile2.dirt=clear_dirt(tile2.dirt,offset2,0)
+        tile2.dirty=1
+    end
+    
+end
+
+-- set dirt to 0 
+-- if clearbottom == 1 clear the bottom offset lines
+-- if clearbottom == 0 clear the top offset lines
+function clear_dirt(dirt,offset,clearbottom)
+    local temp = ""
+    if clearbottom==1 
+    then
+        -- get the first part
+        temp = sub(dirt, 1, offset)
+        -- pad the rest
+        for y=offset+1,#dirt do 
+            temp=""..temp.."0"
+        end
+    else
+        -- pad the first part
+        for y=1,offset do 
+            temp=""..temp.."0"
+        end
+        -- use the rest
+        temp=""..temp..sub(dirt,offset+1, #dirt)
+    end
+
+    return temp   
+end
+
+function initialise_game()
 
     -- config variables
     score={}
     score.diamond=10
 
-    -- player variables
-    p={}   --the player table
-    p.score=0 -- key for storing score
-    p.highscore=9999 -- key for storing high score
-    p.lives=3 -- key for storing lives
+    game.level = levels[1]
 
+    player:init()
+    
     -- viewport variables
     view={}
     view.y=0 -- key for tracking the viewport
 
     -- general variables
     animframes=6
-
-    -- dig array
-    digarray={}
-
-    -- rockarrays - {x, y, falling state, sprite}
-    rockarray={{32,32,0,71},{48,48,0,71},{48,64,0,71},{48,72,0,71},{56,80,0,71}
-        ,{80,80,0,71},{88,80,0,71},{72,72,0,71},{88,56,0,71},{56,104,0,71},{40,112,0,71}
-        ,{72,120,0,71}
-        ,{24,168,0,71},{8,160,0,71}}
-    --    rockarray={{32,32,0,71}}
-    currentrockarray={}
-
-    -- bombarrays - {x, y, falling state, sprite}
-    bombarray={{40,160,0,73},{48,160,0,73},{56,160,0,73},{64,160,0,73},{72,160,0,73},
-                {80,160,0,73},}
-
-    currentbombarray={}
-
-    -- diamondarrays - {x, y, sprite, offset}
-    diamondarray={{40,184,0,75,0,0},{56,184,0,75,1,0},{64,184,0,75,2,0},{80,184,0,75,0,0}}
-
-    currentdiamondarray={}
 
     caverncoords={{40,160},{80,184}}
     pitcoords={{8,72},{32,104}}
@@ -320,98 +178,240 @@ end
 
 -- Reset after life is lost
 function initlife()
-    p.x=16 --key for the x variable
-    p.y=24 --key for the y variable
-    p.dir=0 --key for the direction: 0 right, 1 left, 2 up, 3 down
-    p.sprite=0 -- key for the sprite
-    p.oldsprite=0 -- key for storing the old sprite
-    p.framecount=0 -- key for frame counting
-    p.framestomove=0 -- key for frames left in current move
-    p.activity=0 -- key for player activity. 0 moving, 1 digging, 2 shooting, 3 squashing
-    p.activityframes=0 -- key for frames in current activity
-    p.incavern=0 -- key for whether player is in the diamond cavern
-    p.inpit=0 -- key for whether player is in the pit
-
+    
     view.y=0
 
-    digarray={}
-    initdirtarray()
+    -- reload the map
+    reload(0x1000, 0x1000, 0x2000)
 
-    currentbombarray=copyarray(bombarray)
-    currentdiamondarray=copyarray(diamondarray)
-    currentrockarray=copyarray(rockarray)
-end-- init
-function _init()
-    initgame()
+    -- Populate entities
+    rocks={}
+    bombs={}
+    diamonds={}
 
-    --New stuff
-    initialise_game()
-end
-
--- update
-function _update()
-    -- New stuff
-    for r in all(rocks) do
-        r:update()
-    end
-
-    for r in all(bombs) do
-        r:update()
-    end
-
-    checkplayer()
-    checklocation()
-    checkcamera()
+    screen:init()
 
 end
 
--- draw
-function _draw()
 
+screen = {
+    tiles = {},
+
+    init = function (self)
+        populate_map(self)
+    end,
+    update = function (self)
+        checkcamera()
+    end,
+    draw = function (self)
+        cls()
+
+        -- draw map and set camera
+        map(0,0,0,0,16,24)
+        camera(0,view.y)
+        
+        -- draw dirt
+        draw_dirt()
+    end,
+    draw_zonk = function(self)
+        rectfill(player.x-9,player.y+1,player.x+14,player.y+7,1)
+        print("ZONK!!", player.x-8,player.y+2,7)
+    end,
+    draw_scores = function(self)
+        print("score "..padnumber(player.score),2,2+view.y,7)
+        print("high "..padnumber(player.highscore), 91,2+view.y,7)
+    end
+}
+
+-- Walk the map and replace any entity sprites
+-- Store details about each tile in the map array, initialise any dirt tiles
+function populate_map(screen)
+    screen.tiles={}
+    for y = 0,23 do
+        screen.tiles[y]={}
+        for x = 0,15 do
+            local sprite = mget(x,y)
+
+            local tile = {}
+            tile.sprite=sprite
+            tile.block=0
+            tile.dirty=0
+            tile.dirt=""
+
+            if sprite==71 -- rock
+            then
+                mset(x,y,255)
+                create_rock(x,y)
+            elseif sprite==73 -- bomb
+            then
+                mset(x,y,255)
+                create_bomb(x,y)
+            elseif sprite==75 -- diamond
+            then
+                mset(x,y,255)
+                create_diamond(x,y)
+            elseif sprite== 70 -- dirt
+            then
+                -- initialise a dirt tile
+                tile.dirt="11111111" -- each character represents a line of dirt, if 0 it has been removed
+            elseif sprite== 64 -- dirt
+            then
+                tile.block=1
+            end 
+
+            screen.tiles[y][x] = tile
+
+        end
+    end
+end
+
+-- walk the map array
+-- if a tile is a dirt tile and is dirty, then walk its dirt value and clear any pixels on rows set to 1
+function draw_dirt()
+    for y = 0,23 do
+        for x = 0,15 do
+            local tile=screen.tiles[y][x]
+            for d = 1, #tile.dirt do 
+                if sub(tile.dirt,d,d)=="0" 
+                then 
+                    -- set this row to black
+                    local x1=x*8
+                    local y1=y*8+(d-1) 
+                    for p=x1,x1+7 do
+                        pset(p,y1,0)
+                    end
+                end
+            end
+        end 
+    end
+
+end
+
+function checkcamera()
+
+    -- check for need to reset camera
+    if player.y>=96 and view.y==0 then view.y=64 end
+    if player.y<=88 and view.y==64 then view.y=0 end
+
+end
+
+function showgameover()
+    printh("game over")
     cls()
-
-    -- draw map and set camera
-    map(0,0,0,8,16,24)
-    camera(0,view.y)
-
-    -- draw digs
-    drawdigs()
-
-    -- New stuff
-    for r in all(rocks) do
-        r:draw()
-    end
-
-    for r in all(bombs) do
-        r:draw()
-    end
-
-    for r in all(diamonds) do
-        r:draw()
-    end
-
-    -- draw player
-    spr(p.sprite,p.x,p.y)
-
-    -- if player is digging, draw effect
-    if p.activity==1 and p.activityframes>0 then flashsquare(p.dir) end
-
-    -- score panel
-    drawscorepanel()
-
-    -- zonk text
-    drawzonk()
-
-    --printdebug()
+    print("Game over!")
 end
-----------------------------------------------------------------
---player 
-----------------------------------------------------------------
+levels={
+    {
+        level=1,
+        caverncoords={{40,160},{80,184}},
+        pitcoords={{8,72},{32,104}},    
+    }
+}
+player={
+    score=0, -- key for storing score
+    highscore=9999, -- key for storing high score
+    lives=3, -- key for storing lives
+
+    init=function(self)
+        self.x=16 --key for the x variable
+        self.y=16 --key for the y variable
+        self.dir=0 --key for the direction: 0 right, 1 left, 2 up, 3 down
+        self.sprite=0 -- key for the sprite
+        self.oldsprite=0 -- key for storing the old sprite
+        self.framecount=0 -- key for frame counting
+        self.framestomove=0 -- key for frames left in current move
+        self.activity=0 -- key for player activity. 0 moving, 1 digging, 2 shooting, 3 squashing
+        self.activityframes=0 -- key for frames in current activity
+        self.incavern=0 -- key for whether player is in the diamond cavern
+        self.inpit=0 -- key for whether player is in the pit
+    end,
+    update=function(self)
+        update_player()
+    end,
+    draw=function(self)
+        -- draw player
+        spr(self.sprite,self.x,self.y)
+
+        -- if player is digging, draw effect
+        if self.activity==1 and self.activityframes>0 then flashsquare(self.dir) end
+
+        -- zonk text
+        if player.activity==4 then screen:draw_zonk() end
+
+    end
+}
+
+-- update the player state
+function update_player()
+
+    if player.activity==3 
+    then
+        -- Player is being squashed
+        if player.sprite == 10 then player.sprite=11 else player.sprite=10 end
+        player.activityframes-=1
+        if player.activityframes==0
+            then
+                loselife()
+            end
+        return
+    end
+
+    if player.activity==4
+    then
+        -- Player is being bombed
+        player.activityframes-=1
+        if player.activityframes==0
+            then
+                loselife()
+            end
+        return
+    end
+
+    if player.activity==1 
+    then
+        -- Player is digging, so set that and return
+        player.activityframes-=1
+        if player.activityframes<0 -- Let it go at 0 for a frame to enable digging
+            then
+                --trytodig(player.dir) 
+                player.activity=0 
+                player.sprite=player.oldsprite
+            end    
+        return
+    end
+
+    if player.framestomove!=0
+    then
+        if player.dir==0 then move(1,0,0,1,0,1) end
+        if player.dir==1 then move(-1,0,2,3,1,1) end
+        player.framestomove-=1
+    else
+        -- start new movement
+        local moved = 0
+        local horiz = 0
+        if btn(0) then 
+            moved=move(-1,0,2,3,1,0)
+            horiz=1                 
+        elseif btn(1) and moved==0 then 
+            moved=move(1,0,0,1,0,0)
+            horiz=1 
+        elseif btn(2) and moved==0 then 
+            moved=move(0,-1,4,5,2,0) 
+        elseif btn(3) and moved==0 then 
+            moved=move(0,1,4,5,3,0) 
+        end
+        
+        if moved==1 and horiz==1 then player.framestomove=7 end
+    end
+
+    -- update the player's locations
+    checklocation()
+end
 
 function loselife()
-    p.lives-=1
+    player.lives-=1
 
-    if p.lives < 0
+    if player.lives < 0
     then
         -- gameover
         showgameover()
@@ -428,7 +428,7 @@ end
 -- check for player in the range specified
 -- return 1 if found, 0 if not
 function checkforplayer(x1,x2,y1,y2)
-    if x1 < p.x+8 and p.x <= x2 and y1 < p.y+8 and p.y <= y2
+    if x1 < player.x+8 and player.x <= x2 and y1 < player.y+8 and player.y <= y2
          then
             return 1
         end           
@@ -436,103 +436,37 @@ function checkforplayer(x1,x2,y1,y2)
 end
 
 function killplayer(killedby)
-    if p.activity<3
+    if player.activity<3
     then
-        if killedby=="rock"
+        printh(killedby)
+        if killedby==entity_types.rock
         then 
-            p.activity=3
-            p.activityframes=30      
+            player.activity=3
+            player.activityframes=30      
         end 
-        if killedby=="bomb"
+        if killedby==entity_types.bomb
         then
-            p.activity=4
-            p.activityframes=30
+            player.activity=4
+            player.activityframes=30
         end
     end
-end
-
---check what the player is doing
-function checkplayer()
-
-    if p.activity==3 
-    then
-        -- Player is being squashed
-        if p.sprite == 10 then p.sprite=11 else p.sprite=10 end
-        p.activityframes-=1
-        if p.activityframes==0
-            then
-                loselife()
-            end
-        return
-    end
-
-    if p.activity==4
-    then
-        -- Player is being bombed
-        p.activityframes-=1
-        if p.activityframes==0
-            then
-                loselife()
-            end
-        return
-    end
-
-    if p.activity==1 
-    then
-        -- Player is digging, so set that and return
-        p.activityframes-=1
-        if p.activityframes<0 -- Let it go at 0 for a frame to enable digging
-            then
-                trytodig(p.dir,0) 
-                p.activity=0 
-                p.sprite=p.oldsprite
-            end    
-        return
-    end
-
-    if p.framestomove!=0
-        then
-            if p.dir==0 then move(1,0,0,1,0,1) end
-            if p.dir==1 then move(-1,0,2,3,1,1) end
-            p.framestomove-=1
-        else
-            -- start new movement
-            local moved = 0
-            local horiz = 0
-            if btn(0) then 
-                moved=move(-1,0,2,3,1,0)
-                horiz=1                 
-            end
-            if btn(1) and moved==0 then 
-                moved=move(1,0,0,1,0,0)
-                horiz=1 
-            end
-            if btn(2) and moved==0 then 
-                moved=move(0,-1,4,5,2,0) 
-            end
-            if btn(3) and moved==0 then 
-                moved=move(0,1,4,5,3,0) 
-            end
-            
-            if moved==1 and horiz==1 then p.framestomove=7 end
-        end
 end
 
 function checklocation()
     -- check pit
-    if pitcoords[1][1]<=p.x and p.x<pitcoords[2][1]+8 and pitcoords[1][2]<=p.y and  p.y<pitcoords[2][2]+8
+    if game.level.pitcoords[1][1]<=player.x and player.x<game.level.pitcoords[2][1]+8 and game.level.pitcoords[1][2]<=player.y and  player.y<game.level.pitcoords[2][2]+8
     then
-        p.inpit=1
+        player.inpit=1
     else
-        p.inpit=0
+        player.inpit=0
     end
 
     -- check cavern
-    if caverncoords[1][1]<=p.x and p.x<caverncoords[2][1]+8 and caverncoords[1][2]<=p.y and  p.y<caverncoords[2][2]+8
+    if game.level.caverncoords[1][1]<=player.x and player.x<game.level.caverncoords[2][1]+8 and game.level.caverncoords[1][2]<=player.y and  player.y<game.level.caverncoords[2][2]+8
     then
-        p.incavern=1
+        player.incavern=1
     else
-        p.incavern=0
+        player.incavern=0
     end
 end
 
@@ -559,18 +493,18 @@ function checkforgem(dir)
     local result = 0
     local coords = getplayeradjacentspaces(dir, 0)
     
-    local count=#currentdiamondarray
+    local count=#diamonds
     for x=1,count do 
-        local diamond=currentdiamondarray[x]
+        local diamond=diamonds[x]
         
-        if diamond[6] == 0
+        if diamond.state == entity_states.idle
             then
             
             -- check if coords of diamond are inside the box
-            if diamond[1] >= coords[1] and diamond[1] <= coords[2]
-                and diamond[2] >= coords[3] and diamond[2] <= coords[4]
+            if diamond.x >= coords[1] and diamond.x <= coords[2]
+                and diamond.y >= coords[3] and diamond.y <= coords[4]
                 then
-                    diamond[6] = 1
+                    diamond.state = entity_states.invisible
                     addscore(score.diamond)
                     return 1
                 end            
@@ -581,36 +515,25 @@ function checkforgem(dir)
 end
 
 -- try to dig a range of pixels
-function trytodig(dir,checkonly)
+function trytodig(dir)
     local coords = getplayeradjacentspaces(dir, 1)
-    for x=coords[1],coords[2] do 
-        for y=coords[3], coords[4] do 
-            local pixelc = pget(x,y)
-            if pixelc == 10 
-                then 
-                    -- If player is not already marked as digging, mark and return
-                    if checkonly==1 
-                        then 
-                            if p.activity==0 then 
-                                p.oldsprite=p.sprite
-                            end
-                            p.activity=1 
-                            p.activityframes=10
-                            p.sprite=6+dir
-                        else
-                            -- Otherwise, this is a dirt pixel, so set it to 1 in the dirt array
-                            digarray[y][x]=1
-                            -- Mark the line as dirty
-                            digarray[y][129]=1
-                        end
-                end
-        end
-    end
+    if check_for_dirt(coords[1], coords[3], coords[2], coords[4])==1
+    then
+        dig_dirt(coords[1], coords[3], coords[2], coords[4])
 
+        -- Update this later to just set the player state - anims handled in draw
+        if player.activity==0 then 
+            player.oldsprite=player.sprite
+        end
+        player.activity=1 
+        player.activityframes=10
+        player.sprite=6+dir
+    end
+    
 end
 
 function getplayeradjacentspaces(dir,dig)
-    return getadjacentspaces(dir,dig,p.x,p.y)
+    return getadjacentspaces(dir,dig,player.x,player.y)
 end
 
 -- get range of spaces adjacent to the place in the direction specified
@@ -653,120 +576,62 @@ function move(x,y,s1,s2,d,auto)
                 local gem=checkforgem(d)
                 if gem==1 then return 0 end
                 -- Can't move so try to dig
-                trytodig(d,1)
-                p.dir=d
+                trytodig(d)
+                player.dir=d
                 return 0 
             end
         end
-    p.x+=x
-    p.y+=y
+    player.x+=x
+    player.y+=y
 
     -- limit movement
-    if p.x<0 then p.x=0 end 
-    if p.y<0 then p.y=0 end 
-    if p.x>120 then p.x=120 end 
-    if p.y>184 then p.y=184 end 
+    if player.x<0 then player.x=0 end 
+    if player.y<0 then player.y=0 end 
+    if player.x>120 then player.x=120 end 
+    if player.y>184 then player.y=184 end 
 
     -- check if direction has changed
-    if p.dir!=d 
+    if player.dir!=d 
         then 
-            p.framecount=0 
+            player.framecount=0 
         else 
             -- reset or increment
-            if p.framecount==animframes then p.framecount = 0 else p.framecount+=1 end 
+            if player.framecount==animframes then player.framecount = 0 else player.framecount+=1 end 
     end
 
     -- flip frame if needed
-    if p.framecount==0 
+    if player.framecount==0 
         then
-            if p.sprite==s1 then p.sprite=s2 else p.sprite=s1 end
+            if player.sprite==s1 then player.sprite=s2 else player.sprite=s1 end
     end 
     
-    p.dir=d
+    player.dir=d
 
     return 1
 end
 
 function addscore(score)
-    p.score+=score
+    player.score+=score
 end
 
-----------------------------------------------------------------
---screen
-----------------------------------------------------------------
-
--- Walk the map and replace any entity sprites
-function populate_map()
-    for y = 0,23 do
-        for x = 0,15 do
-            local sprite = mget(x,y)
-            if sprite==71 -- rock
-            then
-                mset(x,y,0)
-                add_rock(x,y+1)
-            elseif sprite==73 -- bomb
-            then
-                mset(x,y,0)
-                add_bomb(x,y+1)
-            elseif sprite==75 -- diamond
-            then
-                mset(x,y,0)
-                add_diamond(x,y+1)
-            end 
-        end
-    end
-end
-
--- Initialises the dig
-function initdirtarray()
-    for y = 1, 192 do 
-        digarray[y]={}
-        -- Include an extra on to say that the line has values
-        for x = 1, 129 do 
-            digarray[y][x]=0
-        end
-    end
-end
-
-function drawzonk()
-    if p.activity==4 then print("ZONK!!", p.x-8,p.y,7) end
-end
-
-function drawdigs()
-    for y = 1+view.y, 120+view.y do 
-        if digarray[y][129]==1 
-        then
-            for x = 8, 120 do 
-                if digarray[y][x]==1 then pset(x,y,0) end
-            end
-        end
-    end
-end
-
-function drawscorepanel()
-    rectfill(0,0+view.y,128,8+view.y,0)
-
-    print("score "..padnumber(p.score),10,2+view.y,7)
-    print("high "..padnumber(p.highscore), 85,2+view.y,7)
-end
 
 -- flash the adjacent square when digging
 function flashsquare(dir)
-    local coords = getadjacentspaces(dir, 1, p.x, p.y)
+    local coords = getadjacentspaces(dir, 1, player.x, player.y)
     local beamcoords = {}
-    if (dir==0) then beamcoords={{p.x+5,p.y+3},{p.x+6,p.y+2},{p.x+6,p.y+3},{p.x+6,p.y+4},{p.x+7,p.y+1},{p.x+7,p.y+2},{p.x+7,p.y+3},{p.x+7,p.y+4},{p.x+7,p.y+5}} end
-    if (dir==1) then beamcoords={{p.x+2,p.y+3},{p.x+1,p.y+2},{p.x+1,p.y+3},{p.x+1,p.y+4},{p.x,p.y+1},{p.x,p.y+2},{p.x,p.y+3},{p.x,p.y+4},{p.x,p.y+5}} end
-    if (dir==2) then beamcoords={{p.x+3,p.y+2},{p.x+2,p.y+1},{p.x+3,p.y+1},{p.x+4,p.y+1},{p.x+1,p.y+0},{p.x+2,p.y+0},{p.x+3,p.y+0},{p.x+4,p.y+0},{p.x+5,p.y+0}} end
-    if (dir==3) then beamcoords={{p.x+3,p.y+5},{p.x+2,p.y+6},{p.x+3,p.y+6},{p.x+4,p.y+6},{p.x+1,p.y+7},{p.x+2,p.y+7},{p.x+3,p.y+7},{p.x+4,p.y+7},{p.x+5,p.y+7}} end
+    if (dir==0) then beamcoords={{player.x+5,player.y+3},{player.x+6,player.y+2},{player.x+6,player.y+3},{player.x+6,player.y+4},{player.x+7,player.y+1},{player.x+7,player.y+2},{player.x+7,player.y+3},{player.x+7,player.y+4},{player.x+7,player.y+5}} end
+    if (dir==1) then beamcoords={{player.x+2,player.y+3},{player.x+1,player.y+2},{player.x+1,player.y+3},{player.x+1,player.y+4},{player.x,player.y+1},{player.x,player.y+2},{player.x,player.y+3},{player.x,player.y+4},{player.x,player.y+5}} end
+    if (dir==2) then beamcoords={{player.x+3,player.y+2},{player.x+2,player.y+1},{player.x+3,player.y+1},{player.x+4,player.y+1},{player.x+1,player.y+0},{player.x+2,player.y+0},{player.x+3,player.y+0},{player.x+4,player.y+0},{player.x+5,player.y+0}} end
+    if (dir==3) then beamcoords={{player.x+3,player.y+5},{player.x+2,player.y+6},{player.x+3,player.y+6},{player.x+4,player.y+6},{player.x+1,player.y+7},{player.x+2,player.y+7},{player.x+3,player.y+7},{player.x+4,player.y+7},{player.x+5,player.y+7}} end
     for x=coords[1],coords[2] do 
         for y=coords[3], coords[4] do
             local pixelc = pget(x,y)
             if pixelc == 10 or pixelc == 0 
             then
-                pset(x,y,p.activityframes) 
+                pset(x,y,player.activityframes) 
                 for b=1, #beamcoords do 
                     local beamcoord=beamcoords[b]
-                    pset(beamcoord[1],beamcoord[2],p.activityframes)
+                    pset(beamcoord[1],beamcoord[2],player.activityframes)
                 end
             end
         end
@@ -774,19 +639,207 @@ function flashsquare(dir)
 end
 
 
-function checkcamera()
 
-    -- check for need to reset camera
-    if p.y>=96 and view.y==0 then view.y=72 end
-    if p.y<=88 and view.y==72 then view.y=0 end
+-- Collections of objects
+rocks={}
+diamonds={}
+gems={}
+bombs={}
+
+entity_states={
+    idle="idle",
+    preparing="preparing",
+    falling="falling",
+    invisible="invisible"
+}
+entity_types={
+    rock=0,
+    bomb=1,
+    diamond=2,
+    gem=3
+}
+
+function create_rock(colx,coly)
+    add(rocks, {
+        x = colx*8,
+        y = coly*8,
+        sprite = 71,
+        state = entity_states.idle,
+        time = 0,
+        preparingtime=40,
+        type=entity_types.rock,
+        draw = function(self)
+            spr(self.sprite,self.x,self.y)   
+        end,
+        update = function(self)
+            update_faller(self, self.type)
+            check_kill(self, self.type)
+        end, 
+        anims = {
+            framecount=0,
+            animindex=1,
+            reset = function(self)
+                self.framecount=1
+                self.animindex=1
+            end,
+            idle={fr=1,71},
+            preparing={fr=1,71,72},
+            falling={fr=1,71}
+        }
+    })
 
 end
 
-function showgameover()
-    printh("game over")
-    cls()
-    print("Game over!")
+function create_bomb(colx,coly)
+    add(bombs, {
+        x = colx*8,
+        y = coly*8,
+        sprite = 73,
+        state = entity_states.idle,
+        time = 0,
+        preparingtime=30,
+        type=entity_types.bomb,
+        draw = function(self)
+            spr(self.sprite,self.x,self.y)   
+        end,
+        update = function(self)
+            if player.incavern==0 then return end
+            update_faller(self, self.type)
+            check_kill(self, self.type)
+        end, 
+        anims = {
+            framecount=0,
+            animindex=1,
+            reset = function(self)
+                self.framecount=1
+                self.animindex=1
+            end,
+            idle={fr=1,73},
+            preparing={fr=1,74},
+            falling={fr=1,74}
+        }
+    })
+
 end
+
+function create_diamond(colx,coly)
+    add(diamonds, {
+        x = colx*8,
+        y = coly*8,
+        sprite = 75,
+        state = entity_states.idle,
+        time = 0,
+        type=entity_types.diamond,
+        draw = function(self)
+            spr(self.sprite,self.x,self.y)   
+        end,
+        update = function(self)
+            if self.anims.framecount>=self.anims[self.state].fr
+            then
+                self.anims.animindex = (self.anims.animindex % #self.anims[self.state]) + 1
+                self.sprite =  self.anims[self.state][self.anims.animindex]
+                self.anims.framecount=1
+            else
+                self.anims.framecount+=1
+            end            
+        end,
+        anims = {
+            framecount=0,
+            animindex=1,
+            reset = function(self)
+                self.framecount=1
+                self.animindex=1
+            end,
+            idle={fr=2,75,76,77},
+            invisible={fr=1,255}
+        }
+    })
+
+end
+
+function check_kill(faller, type)
+    
+    if faller.state!=entity_states.falling then return end
+
+    local coords = getadjacentspaces(3, 0, faller.x, faller.y)
+    if checkforplayer(coords[1],coords[2],coords[3],coords[4])==1 
+    then 
+        killplayer(type) 
+    end
+    
+end
+
+function update_faller(faller, type)
+    -- check below for space to fall
+    local canfall=checkcanfall(faller.x, faller.y) 
+--printh(""..faller.state.." "..faller.anims.framecount)
+    if type==entity_types.bomb and faller.state==entity_states.idle
+    then
+        -- for bombs, check random number
+        local rand=rnd(100)
+        if rand>1 then canfall=0 end
+    end
+
+    if canfall==1 and player.activity<3 
+    then
+        if faller.state==entity_states.falling
+        then
+            -- actually falling
+            faller.y+=1
+        elseif faller.state==entity_states.preparing
+        then
+            faller.time+=1
+            if faller.time >= faller.preparingtime 
+            then
+                faller.state=entity_states.falling
+            end
+        elseif faller.state==entity_states.idle
+        then 
+            faller.state=entity_states.preparing
+            faller.time=0 
+            faller.anims:reset()
+        end
+        
+        -- update sprite
+        faller.anims.framecount+=1
+        faller.anims.animindex = (faller.anims.animindex % #faller.anims[faller.state]) + 1
+        faller.sprite =  faller.anims[faller.state][faller.anims.animindex]
+    else
+        faller.state=entity_states.idle
+        faller.anims:reset()
+    end
+    
+end
+
+-- check a range of pixels that the rock is about to move into
+-- if can't fall return 0
+-- if can fall return 1
+function checkcanfall(x,y) 
+    if y>=184 then return 0 end -- prevent out of bounds
+
+    local coords = getadjacentspaces(3, 0, x, y)
+
+    -- check for an overlap with the player top line
+    if coords[2] >= player.x and player.x+7 >= coords[1] and player.y == coords[3]
+    then
+        return 1
+    end
+
+    -- check other rocks
+    for r=1,#rocks do 
+        local rock=rocks[r]
+        if rock.y==y+8 and rock.x==x then return 0 end
+    end
+
+    -- check dirt array
+    local cellcoords = point_coords_to_cells(coords[1], coords[3])
+    local offset=coords[3]%8
+    local tile = screen.tiles[cellcoords[2]][cellcoords[1]]
+    if sub(tile.dirt,offset+1,offset+1)=="1" or tile.block==1 then return 0 end
+    
+    return 1
+end
+
 
 ------------------------------------------
 -- Utilities
@@ -816,6 +869,21 @@ function copyarray(orig)
     return copy
 end
 
+-- Convert box coords in pixels to cells
+-- Returns array of {x1,y1,x2,y2}
+function box_coords_to_cells(x1,y1,x2,y2)
+    local coords1 = point_coords_to_cells(x1,y1)
+    local coords2 = point_coords_to_cells(x2,y2)
+
+    return {coords1[1],coords1[2],coords2[1],coords2[2]}
+end
+
+-- Convert a point in pixels to cells
+-- Returns {x,y} array
+function point_coords_to_cells(x,y)
+    -- Subtract one from the y value to account for score panel
+    return {flr(x/8),flr(y/8)}
+end
 
 function printdebug()
     printh("CPU: "..stat(1))
