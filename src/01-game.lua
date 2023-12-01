@@ -5,77 +5,78 @@ scores={
 
 game = {
     level={},
-    init = function (self)
-        -- config variables
-        game.level = levels[1]
+    highscore=100
+}
 
-        player:init()
-        
-        -- viewport variables
-        view={}
-        view.y=0 -- key for tracking the viewport
+function game:init()
+    -- config variables
+    self.level = levels[1]
+    player:init()
+    
+    -- viewport variables
+    view={}
+    view.y=0 -- key for tracking the viewport
 
-        self.reset()
-    end,
-    update = function(self)
-        for r in all(rocks) do
-            r:update()
-        end
-    
-        for r in all(bombs) do
-            r:update()
-        end
-    
-        for r in all(diamonds) do
-            r:update()
-        end
-    
-        player:update()
-        screen:update()
-    end,
-    draw = function (self)
-        screen:draw()
+    self.reset()
+end
 
-        for r in all(rocks) do
-            r:draw()
-        end
-
-        for r in all(bombs) do
-            r:draw()
-        end
-
-        for r in all(diamonds) do
-            r:draw()
-        end
-
-        screen:draw_scores()
-
-        player:draw()
-    end,
-    reset = function ()
-        
-        view.y=0
-    
-        -- reload the map
-        reload(0x1000, 0x1000, 0x2000)
-    
-        -- Populate entities
-        rocks={}
-        bombs={}
-        diamonds={}
-    
-        screen:init()
-    
+function game:update()
+    for r in all(rocks) do
+        r:update()
     end
 
-}
+    for r in all(bombs) do
+        r:update()
+    end
+
+    for r in all(diamonds) do
+        r:update()
+    end
+    player:update()
+    screen:update()
+end
+
+function game:draw()
+    screen:draw()
+
+    for r in all(rocks) do
+        r:draw()
+    end
+
+    for r in all(bombs) do
+        r:draw()
+    end
+
+    for r in all(diamonds) do
+        r:draw()
+    end
+
+    screen:draw_scores()
+    player:draw()
+end
+
+function game:reset()
+    
+    view.y=0
+
+    -- reload the map
+    reload(0x1000, 0x1000, 0x2000)
+
+    -- Populate entities
+    rocks={}
+    bombs={}
+    diamonds={}
+
+    screen:init()
+
+end
 
 -- check for a dirt tile in the range specified
 -- return 1 if dirt is found
-function check_for_dirt(x1,y1,x2,y2)
+function game:check_for_dirt(x1,y1,x2,y2)
 
     -- convert pixel coords to cells
-    local coords = box_coords_to_cells(x1,y1,x2,y2)
+    local coords = utilities.box_coords_to_cells(x1,y1,x2,y2)
     
     -- get the top tile
     local tile1 = screen.tiles[coords[2]][coords[1]]
@@ -84,7 +85,7 @@ function check_for_dirt(x1,y1,x2,y2)
     local offset2 = (y2+1) % 8
 
     -- if this is dirt and it still has dirt
-    if tile1.sprite==70 and has_dirt(tile1,offset1,1)==1 then return 1 end
+    if tile1.sprite==70 and self:has_dirt(tile1,offset1,1)==1 then return 1 end
 
     -- if this cell doesn't spill over, exit
     if offset1==0 then return 0 end
@@ -93,14 +94,14 @@ function check_for_dirt(x1,y1,x2,y2)
     local tile2 = screen.tiles[coords[4]][coords[3]]
  
     -- if this is dirt and it still has dirt
-    if tile2.sprite==70 and has_dirt(tile2,offset2,0)==1 then return 1 end
+    if tile2.sprite==70 and self:has_dirt(tile2,offset2,0)==1 then return 1 end
     
     return 0
 end
 
 -- Check for dirt in the tile 
 -- Basically, look for a 1 in the .dirt property after or before the offset
-function has_dirt(tile, offset, afteroffset)
+function game:has_dirt(tile, offset, afteroffset)
     
     for d = 1, #tile.dirt do 
         if sub(tile.dirt,d,d)=="1" and afteroffset==1 and d>offset then return 1 end
@@ -111,9 +112,9 @@ function has_dirt(tile, offset, afteroffset)
 end
 
 -- clear dirt in range specified
-function dig_dirt(x1,y1,x2,y2)
+function game:dig_dirt(x1,y1,x2,y2)
     -- convert pixel coords to cells
-    local coords = box_coords_to_cells(x1,y1,x2,y2)
+    local coords = utilities.box_coords_to_cells(x1,y1,x2,y2)
     
     -- get the top tile
     local tile1 = screen.tiles[coords[2]][coords[1]]
@@ -122,7 +123,7 @@ function dig_dirt(x1,y1,x2,y2)
     
     if tile1.sprite==70 
     then
-        tile1.dirt=clear_dirt(tile1.dirt,offset1,1)
+        tile1.dirt=self:clear_dirt(tile1.dirt,offset1,1)
         tile1.dirty=1
     end 
     
@@ -132,7 +133,7 @@ function dig_dirt(x1,y1,x2,y2)
     local tile2 = screen.tiles[coords[4]][coords[3]]
     if tile2.sprite==70 
     then
-        tile2.dirt=clear_dirt(tile2.dirt,offset2,0)
+        tile2.dirt=self:clear_dirt(tile2.dirt,offset2,0)
         tile2.dirty=1
     end
     
@@ -141,7 +142,7 @@ end
 -- set dirt to 0 
 -- if clearbottom == 1 clear the bottom offset lines
 -- if clearbottom == 0 clear the top offset lines
-function clear_dirt(dirt,offset,clearbottom)
+function game:clear_dirt(dirt,offset,clearbottom)
     local temp = ""
     if clearbottom==1 
     then

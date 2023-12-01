@@ -15,5 +15,5 @@ end
 function _draw()
 
     game:draw()
-    printdebug()
+    --printdebugprintdebug()
 end

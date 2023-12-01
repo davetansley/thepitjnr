@@ -1,40 +1,42 @@
 screen = {
-    tiles = {},
-
-    init = function (self)
-        populate_map(self)
-    end,
-    update = function (self)
-        checkcamera()
-    end,
-    draw = function (self)
-        cls()
-
-        -- draw map and set camera
-        map(0,0,0,0,16,24)
-        camera(0,view.y)
-        
-        -- draw dirt
-        draw_dirt()
-    end,
-    draw_zonk = function(self)
-        rectfill(player.x-9,player.y+1,player.x+14,player.y+7,1)
-        print("ZONK!!", player.x-8,player.y+2,7)
-    end,
-    draw_scores = function(self)
-        rectfill(1,1+view.y,42,7+view.y,1)
-        rectfill(90,1+view.y,126,7+view.y,1)
-        print("score "..padnumber(player.score),2,2+view.y,7)
-        print("high "..padnumber(player.highscore), 91,2+view.y,7)
-    end
+    tiles = {}
 }
+
+function screen:init()
+    screen:populate_map()
+end
+
+function screen:update()
+    screen:check_camera()
+end
+
+function screen:draw()
+    cls()
+    -- draw map and set camera
+    map(0,0,0,0,16,24)
+    camera(0,view.y)    
+    -- draw dirt
+    screen:draw_dirt()
+end
+
+function screen:draw_zonk()
+    rectfill(player.x-9,player.y+1,player.x+14,player.y+7,10)
+    print("ZONK!!", player.x-8,player.y+2,0)
+end
+
+function screen:draw_scores()
+    rectfill(1,1+view.y,47,7+view.y,1)
+    rectfill(85,1+view.y,126,7+view.y,1)
+    print("score "..utilities.pad_number(player.score),2,2+view.y,7)
+    print("high "..utilities.pad_number(game.highscore), 86,2+view.y,7)
+end
 
 -- Walk the map and replace any entity sprites
 -- Store details about each tile in the map array, initialise any dirt tiles
-function populate_map(screen)
-    screen.tiles={}
+function screen:populate_map()
+    self.tiles={}
     for y = 0,23 do
-        screen.tiles[y]={}
+        self.tiles[y]={}
         for x = 0,15 do
             local sprite = mget(x,y)
 
@@ -47,15 +49,21 @@ function populate_map(screen)
             if sprite==71 -- rock
             then
                 mset(x,y,255)
-                create_rock(x,y)
+                local r = rock:new()
+                r:set_coords(x,y)
+                add(rocks,r)
             elseif sprite==73 -- bomb
             then
                 mset(x,y,255)
-                create_bomb(x,y)
+                local b = bomb:new()
+                b:set_coords(x,y)
+                add(bombs,b)
             elseif sprite==75 -- diamond
             then
                 mset(x,y,255)
-                create_diamond(x,y)
+                local d = diamond:new()
+                d:set_coords(x,y)
+                add(diamonds,d)
             elseif sprite== 70 -- dirt
             then
                 -- initialise a dirt tile
@@ -65,7 +73,7 @@ function populate_map(screen)
                 tile.block=1
             end 
 
-            screen.tiles[y][x] = tile
+            self.tiles[y][x] = tile
 
         end
     end
@@ -73,10 +81,10 @@ end
 
 -- walk the map array
 -- if a tile is a dirt tile and is dirty, then walk its dirt value and clear any pixels on rows set to 1
-function draw_dirt()
+function screen:draw_dirt()
     for y = 0,23 do
         for x = 0,15 do
-            local tile=screen.tiles[y][x]
+            local tile=self.tiles[y][x]
             for d = 1, #tile.dirt do 
                 if sub(tile.dirt,d,d)=="0" 
                 then 
@@ -93,16 +101,13 @@ function draw_dirt()
 
 end
 
-function checkcamera()
-
+function screen:check_camera()
     -- check for need to reset camera
     if player.y>=96 and view.y==0 then view.y=64 end
     if player.y<=88 and view.y==64 then view.y=0 end
-
 end
 
-function showgameover()
-    printh("game over")
+function screen:show_gameover()
     cls()
     print("Game over!")
 end
