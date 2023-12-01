@@ -1,19 +1,15 @@
 -- init
 function _init()
-    game:init()
-    screen:init()
+    titlescreen:init()
 end
 
 -- update
 function _update()
-    
-    game:update()
-
+    update()
+    --utilities.printdebug()
 end
 
 -- draw
 function _draw()
-
-    game:draw()
-    --printdebugprintdebug()
+    draw()
 end

@@ -60,7 +60,7 @@ function entity:check_kill()
     
     if self.state!=entity_states.falling then return end
 
-    local coords = utilities:get_adjacent_spaces(3, 0, self.x, self.y)
+    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
     if player:check_for_player(coords[1],coords[2],coords[3],coords[4])==1 
     then 
         if self.type==entity_types.rock
@@ -121,7 +121,7 @@ end
 function entity:check_can_fall() 
     if self.y>=184 then return 0 end -- prevent out of bounds
 
-    local coords = utilities:get_adjacent_spaces(3, 0, self.x, self.y)
+    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
 
     -- check for an overlap with the player top line
     if coords[2] >= player.x and player.x+7 >= coords[1] and player.y == coords[3]

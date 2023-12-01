@@ -11,20 +11,16 @@ player={
     lives=3, -- key for storing lives
 }
 
+directions = {
+    right = 0,
+    left = 1,
+    up = 2,
+    down = 3
+}
 
 function player:init()
-    self.x=16 --key for the x variable
-    self.y=16 --key for the y variable
-    self.dir=0 --key for the direction: 0 right, 1 left, 2 up, 3 down
-    self.sprite=0 -- key for the sprite
-    self.oldsprite=0 -- key for storing the old sprite
-    self.framecount=0 -- key for frame counting
-    self.framestomove=0 -- key for frames left in current move
-    self.state=0 -- key for player activity. 0 moving, 1 digging, 2 shooting, 3 squashing
-    self.stateframes=0 -- key for frames in current activity
-    self.incavern=0 -- key for whether player is in the diamond cavern
-    self.inpit=0 -- key for whether player is in the pit
-    self.animframes=3 -- key for the number of frames an animation frame has
+    self.lives = 3
+    self:reset()
 end
 
 function player:update()
@@ -41,6 +37,21 @@ function player:draw()
     -- zonk text
     if player.state==player_states.bombed then screen:draw_zonk() end
 
+end
+
+function player:reset()
+    self.x=16 --key for the x variable
+    self.y=16 --key for the y variable
+    self.dir=directions.right --key for the direction: 0 right, 1 left, 2 up, 3 down
+    self.sprite=0 -- key for the sprite
+    self.oldsprite=0 -- key for storing the old sprite
+    self.framecount=0 -- key for frame counting
+    self.framestomove=0 -- key for frames left in current move
+    self.state=0 -- key for player activity. 0 moving, 1 digging, 2 shooting, 3 squashing
+    self.stateframes=0 -- key for frames in current activity
+    self.incavern=0 -- key for whether player is in the diamond cavern
+    self.inpit=0 -- key for whether player is in the pit
+    self.animframes=10 -- key for the number of frames an animation frame has
 end
 
 -- return 1 if the player is dying
@@ -89,23 +100,23 @@ function player:update_player()
 
     if self.framestomove!=0
     then
-        if self.dir==0 then self:move(1,0,0,1,0,1) end
-        if self.dir==1 then self:move(-1,0,2,3,1,1) end
+        if self.dir==directions.right then self:move(1,0,0,1,directions.right,1) end
+        if self.dir==directions.left then self:move(-1,0,2,3,directions.left,1) end
         self.framestomove-=1
     else
         -- start new movement
         local moved = 0
         local horiz = 0
         if btn(0) then 
-            moved=self:move(-1,0,2,3,1,0)
+            moved=self:move(-1,0,2,3,directions.left,0)
             horiz=1                 
         elseif btn(1) and moved==0 then 
-            moved=self:move(1,0,0,1,0,0)
+            moved=self:move(1,0,0,1,directions.right,0)
             horiz=1 
         elseif btn(2) and moved==0 then 
-            moved=self:move(0,-1,4,5,2,0) 
+            moved=self:move(0,-1,4,5,directions.up,0) 
         elseif btn(3) and moved==0 then 
-            moved=self:move(0,1,4,5,3,0) 
+            moved=self:move(0,1,4,5,directions.down,0) 
         end
         
         if moved==1 and horiz==1 then self.framestomove=7 end
@@ -121,10 +132,11 @@ function player:lose_life()
     if self.lives < 0
     then
         -- gameover
-        screen:show_gameover()
+        game:show_gameover()
     else
-        self:init()
+        self:reset()
         game.reset()
+        livesscreen:init()
     end
 end
 
@@ -289,10 +301,10 @@ end
 function player:flash_square()
     local coords = utilities:get_adjacent_spaces(self.dir, 1, self.x, self.y)
     local beamcoords = {}
-    if (self.dir==0) then beamcoords={{self.x+5,self.y+3},{self.x+6,self.y+2},{self.x+6,self.y+3},{self.x+6,self.y+4},{self.x+7,self.y+1},{self.x+7,self.y+2},{self.x+7,self.y+3},{self.x+7,self.y+4},{self.x+7,self.y+5}} end
-    if (self.dir==1) then beamcoords={{self.x+2,self.y+3},{self.x+1,self.y+2},{self.x+1,self.y+3},{self.x+1,self.y+4},{self.x,self.y+1},{self.x,self.y+2},{self.x,self.y+3},{self.x,self.y+4},{self.x,self.y+5}} end
-    if (self.dir==2) then beamcoords={{self.x+3,self.y+2},{self.x+2,self.y+1},{self.x+3,self.y+1},{self.x+4,self.y+1},{self.x+1,self.y+0},{self.x+2,self.y+0},{self.x+3,self.y+0},{self.x+4,self.y+0},{self.x+5,self.y+0}} end
-    if (self.dir==3) then beamcoords={{self.x+3,self.y+5},{self.x+2,self.y+6},{self.x+3,self.y+6},{self.x+4,self.y+6},{self.x+1,self.y+7},{self.x+2,self.y+7},{self.x+3,self.y+7},{self.x+4,self.y+7},{self.x+5,self.y+7}} end
+    if (self.dir==directions.right) then beamcoords={{self.x+5,self.y+3},{self.x+6,self.y+2},{self.x+6,self.y+3},{self.x+6,self.y+4},{self.x+7,self.y+1},{self.x+7,self.y+2},{self.x+7,self.y+3},{self.x+7,self.y+4},{self.x+7,self.y+5}} end
+    if (self.dir==directions.left) then beamcoords={{self.x+2,self.y+3},{self.x+1,self.y+2},{self.x+1,self.y+3},{self.x+1,self.y+4},{self.x,self.y+1},{self.x,self.y+2},{self.x,self.y+3},{self.x,self.y+4},{self.x,self.y+5}} end
+    if (self.dir==directions.up) then beamcoords={{self.x+3,self.y+2},{self.x+2,self.y+1},{self.x+3,self.y+1},{self.x+4,self.y+1},{self.x+1,self.y+0},{self.x+2,self.y+0},{self.x+3,self.y+0},{self.x+4,self.y+0},{self.x+5,self.y+0}} end
+    if (self.dir==directions.down) then beamcoords={{self.x+3,self.y+5},{self.x+2,self.y+6},{self.x+3,self.y+6},{self.x+4,self.y+6},{self.x+1,self.y+7},{self.x+2,self.y+7},{self.x+3,self.y+7},{self.x+4,self.y+7},{self.x+5,self.y+7}} end
     for x=coords[1],coords[2] do 
         for y=coords[3], coords[4] do
             local pixelc = pget(x,y)

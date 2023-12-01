@@ -1,14 +1,27 @@
 
 scores={
-    diamond=10
+    diamond=10,
+    singlebonus=500,
+    doublebonus=1000,
+    triplebonus=1500
+}
+
+game_states = {
+    waiting = 0,
+    running = 1
 }
 
 game = {
     level={},
-    highscore=100
+    highscore=100,
+    state=game_states.waiting,
+    ship={},
+    tank={}
 }
 
 function game:init()
+    self.switchto()
+
     -- config variables
     self.level = levels[1]
     player:init()
@@ -18,9 +31,35 @@ function game:init()
     view.y=0 -- key for tracking the viewport
 
     self.reset()
+
+    screen:init()
+
+    -- Create a new ship and tank
+    self.ship = ship:new()
+    self.tank = tank:new()
+
+    self.state = game_states.running
+end
+
+function game:switchto()
+    -- set state functions
+    update=function ()
+        game:update()
+    end
+    draw=function ()
+        game:draw()
+    end
 end
 
 function game:update()
+
+    -- update the ship only if needed
+    if self.ship.state == ship_states.landing
+    then
+        self.ship:update()
+        return;
+    end
+
     for r in all(rocks) do
         r:update()
     end
@@ -32,6 +71,12 @@ function game:update()
     for r in all(diamonds) do
         r:update()
     end
+
+    if self.tank.state == tank_states.moving
+    then
+        self.tank:update()
+    end
+
     player:update()
     screen:update()
 end
@@ -51,8 +96,15 @@ function game:draw()
         r:draw()
     end
 
-    screen:draw_scores()
-    player:draw()
+    self.ship:draw()
+
+    self.tank:draw()
+
+    if self.ship.state == ship_states.landed
+    then
+        screen:draw_scores()
+        player:draw()
+    end
 end
 
 function game:reset()
@@ -69,6 +121,12 @@ function game:reset()
 
     screen:init()
 
+end
+
+function game:show_gameover()
+    self.state=game_states.waiting
+    player:init()
+    titlescreen:init()
 end
 
 -- check for a dirt tile in the range specified

@@ -66,3 +66,9 @@ end
 function utilities.printdebug()
     printh("CPU: "..stat(1))
 end
+
+function utilities.print_text(text, line, colour)
+    local ydelta=6
+    local x = 64 - 4*(#text/2)
+    print(text, x, ydelta*line,colour)
+end

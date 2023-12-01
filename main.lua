@@ -1,33 +1,42 @@
 -- init
 function _init()
-    game:init()
-    screen:init()
+    titlescreen:init()
 end
 
 -- update
 function _update()
-    
-    game:update()
-
+    update()
+    --utilities.printdebug()
 end
 
 -- draw
 function _draw()
-
-    game:draw()
-    --printdebugprintdebug()
+    draw()
 end
 
 scores={
-    diamond=10
+    diamond=10,
+    singlebonus=500,
+    doublebonus=1000,
+    triplebonus=1500
+}
+
+game_states = {
+    waiting = 0,
+    running = 1
 }
 
 game = {
     level={},
-    highscore=100
+    highscore=100,
+    state=game_states.waiting,
+    ship={},
+    tank={}
 }
 
 function game:init()
+    self.switchto()
+
     -- config variables
     self.level = levels[1]
     player:init()
@@ -37,9 +46,35 @@ function game:init()
     view.y=0 -- key for tracking the viewport
 
     self.reset()
+
+    screen:init()
+
+    -- Create a new ship and tank
+    self.ship = ship:new()
+    self.tank = tank:new()
+
+    self.state = game_states.running
+end
+
+function game:switchto()
+    -- set state functions
+    update=function ()
+        game:update()
+    end
+    draw=function ()
+        game:draw()
+    end
 end
 
 function game:update()
+
+    -- update the ship only if needed
+    if self.ship.state == ship_states.landing
+    then
+        self.ship:update()
+        return;
+    end
+
     for r in all(rocks) do
         r:update()
     end
@@ -51,6 +86,12 @@ function game:update()
     for r in all(diamonds) do
         r:update()
     end
+
+    if self.tank.state == tank_states.moving
+    then
+        self.tank:update()
+    end
+
     player:update()
     screen:update()
 end
@@ -70,8 +111,15 @@ function game:draw()
         r:draw()
     end
 
-    screen:draw_scores()
-    player:draw()
+    self.ship:draw()
+
+    self.tank:draw()
+
+    if self.ship.state == ship_states.landed
+    then
+        screen:draw_scores()
+        player:draw()
+    end
 end
 
 function game:reset()
@@ -88,6 +136,12 @@ function game:reset()
 
     screen:init()
 
+end
+
+function game:show_gameover()
+    self.state=game_states.waiting
+    player:init()
+    titlescreen:init()
 end
 
 -- check for a dirt tile in the range specified
@@ -193,6 +247,7 @@ screen = {
 
 function screen:init()
     screen:populate_map()
+    camera(0,view.y)  
 end
 
 function screen:update()
@@ -295,11 +350,6 @@ function screen:check_camera()
     if player.y>=96 and view.y==0 then view.y=64 end
     if player.y<=88 and view.y==64 then view.y=0 end
 end
-
-function screen:show_gameover()
-    cls()
-    print("Game over!")
-end
 levels={
     {
         level=1,
@@ -320,20 +370,16 @@ player={
     lives=3, -- key for storing lives
 }
 
+directions = {
+    right = 0,
+    left = 1,
+    up = 2,
+    down = 3
+}
 
 function player:init()
-    self.x=16 --key for the x variable
-    self.y=16 --key for the y variable
-    self.dir=0 --key for the direction: 0 right, 1 left, 2 up, 3 down
-    self.sprite=0 -- key for the sprite
-    self.oldsprite=0 -- key for storing the old sprite
-    self.framecount=0 -- key for frame counting
-    self.framestomove=0 -- key for frames left in current move
-    self.state=0 -- key for player activity. 0 moving, 1 digging, 2 shooting, 3 squashing
-    self.stateframes=0 -- key for frames in current activity
-    self.incavern=0 -- key for whether player is in the diamond cavern
-    self.inpit=0 -- key for whether player is in the pit
-    self.animframes=3 -- key for the number of frames an animation frame has
+    self.lives = 3
+    self:reset()
 end
 
 function player:update()
@@ -350,6 +396,21 @@ function player:draw()
     -- zonk text
     if player.state==player_states.bombed then screen:draw_zonk() end
 
+end
+
+function player:reset()
+    self.x=16 --key for the x variable
+    self.y=16 --key for the y variable
+    self.dir=directions.right --key for the direction: 0 right, 1 left, 2 up, 3 down
+    self.sprite=0 -- key for the sprite
+    self.oldsprite=0 -- key for storing the old sprite
+    self.framecount=0 -- key for frame counting
+    self.framestomove=0 -- key for frames left in current move
+    self.state=0 -- key for player activity. 0 moving, 1 digging, 2 shooting, 3 squashing
+    self.stateframes=0 -- key for frames in current activity
+    self.incavern=0 -- key for whether player is in the diamond cavern
+    self.inpit=0 -- key for whether player is in the pit
+    self.animframes=10 -- key for the number of frames an animation frame has
 end
 
 -- return 1 if the player is dying
@@ -398,23 +459,23 @@ function player:update_player()
 
     if self.framestomove!=0
     then
-        if self.dir==0 then self:move(1,0,0,1,0,1) end
-        if self.dir==1 then self:move(-1,0,2,3,1,1) end
+        if self.dir==directions.right then self:move(1,0,0,1,directions.right,1) end
+        if self.dir==directions.left then self:move(-1,0,2,3,directions.left,1) end
         self.framestomove-=1
     else
         -- start new movement
         local moved = 0
         local horiz = 0
         if btn(0) then 
-            moved=self:move(-1,0,2,3,1,0)
+            moved=self:move(-1,0,2,3,directions.left,0)
             horiz=1                 
         elseif btn(1) and moved==0 then 
-            moved=self:move(1,0,0,1,0,0)
+            moved=self:move(1,0,0,1,directions.right,0)
             horiz=1 
         elseif btn(2) and moved==0 then 
-            moved=self:move(0,-1,4,5,2,0) 
+            moved=self:move(0,-1,4,5,directions.up,0) 
         elseif btn(3) and moved==0 then 
-            moved=self:move(0,1,4,5,3,0) 
+            moved=self:move(0,1,4,5,directions.down,0) 
         end
         
         if moved==1 and horiz==1 then self.framestomove=7 end
@@ -430,10 +491,11 @@ function player:lose_life()
     if self.lives < 0
     then
         -- gameover
-        screen:show_gameover()
+        game:show_gameover()
     else
-        self:init()
+        self:reset()
         game.reset()
+        livesscreen:init()
     end
 end
 
@@ -598,10 +660,10 @@ end
 function player:flash_square()
     local coords = utilities:get_adjacent_spaces(self.dir, 1, self.x, self.y)
     local beamcoords = {}
-    if (self.dir==0) then beamcoords={{self.x+5,self.y+3},{self.x+6,self.y+2},{self.x+6,self.y+3},{self.x+6,self.y+4},{self.x+7,self.y+1},{self.x+7,self.y+2},{self.x+7,self.y+3},{self.x+7,self.y+4},{self.x+7,self.y+5}} end
-    if (self.dir==1) then beamcoords={{self.x+2,self.y+3},{self.x+1,self.y+2},{self.x+1,self.y+3},{self.x+1,self.y+4},{self.x,self.y+1},{self.x,self.y+2},{self.x,self.y+3},{self.x,self.y+4},{self.x,self.y+5}} end
-    if (self.dir==2) then beamcoords={{self.x+3,self.y+2},{self.x+2,self.y+1},{self.x+3,self.y+1},{self.x+4,self.y+1},{self.x+1,self.y+0},{self.x+2,self.y+0},{self.x+3,self.y+0},{self.x+4,self.y+0},{self.x+5,self.y+0}} end
-    if (self.dir==3) then beamcoords={{self.x+3,self.y+5},{self.x+2,self.y+6},{self.x+3,self.y+6},{self.x+4,self.y+6},{self.x+1,self.y+7},{self.x+2,self.y+7},{self.x+3,self.y+7},{self.x+4,self.y+7},{self.x+5,self.y+7}} end
+    if (self.dir==directions.right) then beamcoords={{self.x+5,self.y+3},{self.x+6,self.y+2},{self.x+6,self.y+3},{self.x+6,self.y+4},{self.x+7,self.y+1},{self.x+7,self.y+2},{self.x+7,self.y+3},{self.x+7,self.y+4},{self.x+7,self.y+5}} end
+    if (self.dir==directions.left) then beamcoords={{self.x+2,self.y+3},{self.x+1,self.y+2},{self.x+1,self.y+3},{self.x+1,self.y+4},{self.x,self.y+1},{self.x,self.y+2},{self.x,self.y+3},{self.x,self.y+4},{self.x,self.y+5}} end
+    if (self.dir==directions.up) then beamcoords={{self.x+3,self.y+2},{self.x+2,self.y+1},{self.x+3,self.y+1},{self.x+4,self.y+1},{self.x+1,self.y+0},{self.x+2,self.y+0},{self.x+3,self.y+0},{self.x+4,self.y+0},{self.x+5,self.y+0}} end
+    if (self.dir==directions.down) then beamcoords={{self.x+3,self.y+5},{self.x+2,self.y+6},{self.x+3,self.y+6},{self.x+4,self.y+6},{self.x+1,self.y+7},{self.x+2,self.y+7},{self.x+3,self.y+7},{self.x+4,self.y+7},{self.x+5,self.y+7}} end
     for x=coords[1],coords[2] do 
         for y=coords[3], coords[4] do
             local pixelc = pget(x,y)
@@ -681,7 +743,7 @@ function entity:check_kill()
     
     if self.state!=entity_states.falling then return end
 
-    local coords = utilities:get_adjacent_spaces(3, 0, self.x, self.y)
+    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
     if player:check_for_player(coords[1],coords[2],coords[3],coords[4])==1 
     then 
         if self.type==entity_types.rock
@@ -742,7 +804,7 @@ end
 function entity:check_can_fall() 
     if self.y>=184 then return 0 end -- prevent out of bounds
 
-    local coords = utilities:get_adjacent_spaces(3, 0, self.x, self.y)
+    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
 
     -- check for an overlap with the player top line
     if coords[2] >= player.x and player.x+7 >= coords[1] and player.y == coords[3]
@@ -829,6 +891,253 @@ function diamond:update()
     end 
 end
 
+titlescreen = {
+    blocks = "1,3,2,3,3,3,4,3,5,3,6,3,9,3,10,3,11,3,12,3,13,3,14,3,"
+            .."2,4,6,4,13,4,"
+            .."2,5,6,5,13,5,"
+            .."2,6,3,6,4,6,5,6,6,6,13,6,"
+            .."2,7,9,7,13,7,"
+            .."2,8,13,8,"
+            .."2,9,9,9,13,9,"
+            .."2,10,9,10,13,10,"
+            .."2,11,9,11,13,11,"
+            .."2,12,9,12,13,12",
+    showfor=150,
+    timer=0
+
+}
+
+function titlescreen:init()
+    -- set state functions
+    update=function ()
+        titlescreen:update()
+    end
+    draw=function ()
+        titlescreen:draw()
+    end
+end
+
+function titlescreen:update()
+    
+    if self.timer >= self.showfor 
+    then
+        self.timer=0 
+        instructions:init() 
+    end 
+    self.timer+=1
+
+    if (btn(5)) livesscreen:init()
+end
+
+function titlescreen:draw()
+    cls(0)
+
+    local thexbase = 8
+    local theybase = 14
+    local jnrxbase = 86
+    local jnrybase = 106
+    
+    spr(80,thexbase,theybase)
+    spr(81,thexbase+9,theybase)
+    spr(82,thexbase+18,theybase)
+
+    spr(83,jnrxbase,jnrybase)
+    spr(84,jnrxbase+9,jnrybase)
+    spr(85,jnrxbase+18,jnrybase)
+
+    local blockarray=split(titlescreen.blocks)
+    for x=1,#blockarray,2 do 
+        spr(78,blockarray[x]*8,blockarray[x+1]*8)
+    end
+
+    print("press ❎ to start",30,120,7)
+end
+ship_states = {
+    landing = 0,
+    landed = 1
+}
+
+ship = {
+    x = 0,
+    y = 0,
+    sprites = {96,97},
+    state = ship_states.landing,
+    framesperupdate=4,
+    frames=0,
+    anims={
+        {96,97},{98,99}
+    }
+}
+
+function ship:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function ship:update()
+    self.frames+=1
+    if self.frames==self.framesperupdate
+    then
+        self.y += 1
+        self.frames=0
+    end
+    if self.y == 8 then self.state = ship_states.landed end    
+    if self.frames%2==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+end
+
+function ship:draw()
+    for x=1,#self.sprites do 
+        spr(self.sprites[x], self.x+(8*x-8), self.y)
+    end
+end
+
+tank_states = {
+    offscreen = 0,
+    moving = 1,
+    shooting=2
+}
+
+tank = {
+    x = 128,
+    y = 8,
+    sprites = {100,101,102,103},
+    state = tank_states.moving,
+    framesperupdate=2,
+    frames=0,
+    delay=60,
+    anims={
+        {100,101},{102,103}
+    }
+}
+
+function tank:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function tank:update()
+    if self.delay > 0
+    then
+        self.delay-=1
+        return
+    end
+
+    if self.state==tank_states.moving
+    then
+        self.frames+=1
+        if self.frames==self.framesperupdate
+        then
+            self.x-=1
+            self.frames=0
+        end
+        if self.x == 96 then self.state = tank_states.shooting end    
+    end
+    if self.frames%2==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+end
+
+function tank:draw()
+    for x=1,#self.sprites do 
+        spr(self.sprites[x], self.x+(8*x-8), self.y)
+    end
+end
+
+instructions = {
+    showfor=150,
+    timer=0
+}
+
+function instructions:init()
+    -- set state functions
+    update=function ()
+        instructions:update()
+    end
+    draw=function ()
+        instructions:draw()
+    end
+end
+
+function instructions:update()
+
+    if self.timer >= self.showfor then 
+        self.timer = 0
+        titlescreen:init() 
+    end 
+    self.timer+=1
+    
+    if (btn(5)) livesscreen:init()
+end
+
+function instructions:draw()
+    cls(0)
+    utilities.print_text("the object", 0, 7)
+    utilities.print_text("of this game", 1, 7)
+    utilities.print_text("is to dig down", 2, 7)
+    utilities.print_text("to the bottom pit", 3, 7)
+    utilities.print_text("and", 4, 7)
+    utilities.print_text("collect at least", 5, 7)
+    utilities.print_text("one large jewel", 6, 7)
+    utilities.print_text("then", 7, 7)
+    utilities.print_text("return to ship", 8, 7)
+    utilities.print_text("thru upper pit", 9, 7)
+    utilities.print_text("single bonus "..scores.singlebonus.." points", 11, 10)
+    utilities.print_text("collect one large jewel", 12, 7)
+    utilities.print_text("and return to ship", 13, 7)
+    utilities.print_text("double bonus "..scores.doublebonus.." points", 15, 12)
+    utilities.print_text("collect all three large jewels", 16, 7)
+    utilities.print_text("or all four small jewels", 17, 7)
+    utilities.print_text("triple bonus "..scores.triplebonus.." points", 19, 8)
+    utilities.print_text("collect all seven large jewels", 20, 7)
+    
+end
+
+livesscreen = {
+    showfor=90,
+    timer=0
+}
+
+function livesscreen:init()
+    -- set state functions
+    update=function ()
+        livesscreen:update()
+    end
+    draw=function ()
+        livesscreen:draw()
+    end
+end
+
+function livesscreen:update()
+
+    if self.timer >= self.showfor then 
+        self.timer = 0
+        if game.state==game_states.waiting
+        then
+            game:init()
+        else
+            game:switchto()     
+        end 
+    end
+    self.timer+=1
+end
+
+function livesscreen:draw()
+    cls(1)
+
+    rectfill(46,11,79,17,0)
+    utilities.print_text("player 1",2,7)
+
+    if player.lives==0 
+    then
+        utilities.print_text("last man", 5, 10)
+    else
+        utilities.print_text(""..player.lives.." men left", 5, 10)
+    end
+    
+end
+
 utilities = {}
 
 function utilities.pad_number(input)
@@ -896,4 +1205,10 @@ end
 
 function utilities.printdebug()
     printh("CPU: "..stat(1))
+end
+
+function utilities.print_text(text, line, colour)
+    local ydelta=6
+    local x = 64 - 4*(#text/2)
+    print(text, x, ydelta*line,colour)
 end

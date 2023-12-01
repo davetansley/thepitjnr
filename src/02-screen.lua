@@ -4,6 +4,7 @@ screen = {
 
 function screen:init()
     screen:populate_map()
+    camera(0,view.y)  
 end
 
 function screen:update()
@@ -105,9 +106,4 @@ function screen:check_camera()
     -- check for need to reset camera
     if player.y>=96 and view.y==0 then view.y=64 end
     if player.y<=88 and view.y==64 then view.y=0 end
-end
-
-function screen:show_gameover()
-    cls()
-    print("Game over!")
 end
