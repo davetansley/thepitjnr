@@ -33,7 +33,12 @@ game = {
     state=game_states.waiting,
     ship={},
     tank={},
-    frame=0
+    monster={},
+    frame=0,
+    mountain={10,9,8,7,6,5,4},
+    currentmountain=1,
+    currentmountaincount=0,
+    tickframes=15 -- how many frames before we process the timer?
 }
 
 function game:init()
@@ -47,13 +52,9 @@ function game:init()
     view={}
     view.y=0 -- key for tracking the viewport
 
-    self.reset()
+    self:reset()
 
     screen:init()
-
-    -- Create a new ship and tank
-    self.ship = ship:new()
-    self.tank = tank:new()
 
     self.state = game_states.running
 end
@@ -71,11 +72,11 @@ end
 function game:update()
 
     self.frame+=1
-    if (self.frame>30) self.frame=0
+    if (self.frame>3000) self.frame=0
 
     -- update the ship only if needed
     self.ship:update()
-    if self.ship.state == ship_states.landing
+    if self.ship.state == ship_states.landing or self.ship.state == ship_states.escaping
     then
         return;
     end
@@ -101,8 +102,11 @@ function game:update()
         self.tank:update()
     end
 
+    self.monster:update()
+
     player:update()
     screen:update()
+    game:update_timer()
 end
 
 function game:draw()
@@ -128,6 +132,10 @@ function game:draw()
 
     self.tank:draw()
 
+    self:draw_timer()
+
+    self.monster:draw()
+
     if self.ship.state == ship_states.landed
     then
         screen:draw_scores()
@@ -139,6 +147,11 @@ function game:reset()
     
     view.y=0
 
+    -- Create a new ship and tank
+    self.ship = ship:new()
+    self.tank = tank:new()
+    self.monster = monster:new()
+
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
 
@@ -148,8 +161,63 @@ function game:reset()
     diamonds={}
     gems={}
 
+    game.currentmountain=1
+    game.currentmountaincount=0
+
     screen:init()
 
+end
+
+function game:update_timer()
+
+    if (self.frame % game.tickframes != 0 or self.tank.state != tank_states.shooting) return
+
+    if self.currentmountain > #self.mountain
+    then
+        view.y = 0
+        self.ship.state = ship_states.escaping
+        return
+    end
+
+    -- update count 
+    self.currentmountaincount+=1
+
+    local currentsprite = mget(self.mountain[self.currentmountain], 1)
+    
+    -- if this is the last count, check tile above current
+    if self.currentmountaincount % 4 == 0 or currentsprite == 66 or currentsprite == 67 -- the slope tiles only take a single hit
+    then
+        self.currentmountaincount=0
+        -- get the sprite above current
+        local sprite = mget(self.mountain[self.currentmountain], 0)
+        if sprite==65
+        then
+            -- is empty, so move to next mountain
+            mset(self.mountain[self.currentmountain], 1, 65)
+            self.currentmountain+=1
+        else
+            -- is not empty, so copy current sprite down and clear above
+            mset(self.mountain[self.currentmountain], 1, sprite)
+            mset(self.mountain[self.currentmountain], 0, 65)
+        end
+    end
+
+end
+
+function game:draw_timer()
+    if self.currentmountaincount > 0
+    then
+        local first = 1
+        for x=8-self.currentmountaincount*2, 8, 2 do 
+            local c = 1
+            if (first == 1) c = 8
+            for y=8,15 do 
+                pset(x+8*self.mountain[self.currentmountain],y,c)
+                pset(x+8*self.mountain[self.currentmountain]+1,y,c)
+            end
+            first = 0            
+        end
+    end
 end
 
 function game:show_gameover()
@@ -514,7 +582,7 @@ function player:lose_life()
         game:show_gameover()
     else
         self:reset()
-        game.reset()
+        game:reset()
         livesscreen:init()
     end
 end
@@ -522,11 +590,10 @@ end
 -- check for player in the range specified
 -- return 1 if found, 0 if not
 function player:check_for_player(x1,x2,y1,y2)
-    if x1 < self.x+8 and self.x <= x2 and y1 < self.y+8 and self.y <= y2
-         then
-            return 1
-        end           
-    return 0
+    local coords1 = {x1,x2,y1,y2}
+    local coords2 = {self.x,self.x+8,self.y,self.y+8}
+
+    return utilities:check_overlap(coords1,coords2)
 end
 
 function player:kill_player(state)
@@ -553,20 +620,39 @@ function player:check_location()
 end
 
 -- check a range of pixels that the player is about to move into
--- if can move return 0
--- if can't move return 1
+-- if can't move return 0
+-- if can move return 1
 function player:check_can_move(dir)
-    local result = 0
+    local result = 1
     local coords = self:get_player_adjacent_spaces(dir,0)
-    for x=coords[1],coords[2] do 
-        for y=coords[3], coords[4] do 
-            local pixelc = pget(x,y)
-            -- Not blank or dirt, so can't move
-            if pixelc != 0 then return 1 end
-        end
+    
+    -- if rock, can't move
+    for r in all(rocks) do
+        local coords2 = {r.x,r.x+8,r.y,r.y+8}
+        local overlap = utilities:check_overlap(coords,coords2)
+        if (overlap==1) return 0
     end
 
-    return result
+    -- if bomb, can't move
+    for b in all(bombs) do
+        local coords2 = {b.x,b.x+8,b.y,b.y+8}
+        local overlap = utilities:check_overlap(coords,coords2)
+        if (overlap==1) return 0
+    end
+
+    -- if contains block, can't move
+    local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
+    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64
+    then
+        return 0
+    end
+
+    -- if contains dirt, can't move - will dig
+    local dirtfound=game:check_for_dirt(coords[1],coords[3],coords[2],coords[4])
+    if (dirtfound==1) return 0
+
+    -- otherwise, can move
+    return 1
 end
 
 -- try to dig a range of pixels
@@ -600,9 +686,8 @@ function player:move(x,y,s1,s2,d,auto)
     -- only check movement if this is auto movement
     if auto==0
     then
-        local preventmove=0
-        preventmove=self:check_can_move(d)
-        if preventmove!=0 
+        local canmove=self:check_can_move(d)
+        if canmove!=1
         then 
             self:try_to_dig(d)
             self.dir=d
@@ -969,7 +1054,9 @@ function titlescreen:draw()
 end
 ship_states = {
     landing = 0,
-    landed = 1
+    landed = 1,
+    escaping = 2,
+    lingering=3
 }
 
 ship = {
@@ -991,6 +1078,22 @@ end
 
 function ship:update()
 
+    if self.state==ship_states.lingering
+    then
+        if (game.frame%40==0) self.state=ship_states.landed -- hang around for a second
+        return
+    end
+
+    if self.state==ship_states.escaping 
+    then
+        self.y-=1
+        if self.y < -64 -- hang around for a while, to rub it in
+        then
+            player:lose_life()
+        end
+        return
+    end
+
     if self.state==ship_states.landed 
     then
         if (self.x > 0 and game.frame%2==0) self.x-=1 
@@ -1001,7 +1104,7 @@ function ship:update()
     then
         self.y += 1
     end
-    if self.y == 8 then self.state = ship_states.landed end    
+    if self.y == 8 then self.state = ship_states.lingering end    
     if game.frame%2==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
 end
 
@@ -1020,7 +1123,9 @@ tank_states = {
 tank = {
     x = 128,
     y = 8,
-    sprites = {100,101,102,103},
+    sprites = {100,101},
+    fire_sprite = 104,
+    bullet_sprite = 105,
     state = tank_states.moving,
     framesperupdate=2,
     frames=0,
@@ -1060,6 +1165,14 @@ end
 function tank:draw()
     for x=1,#self.sprites do 
         spr(self.sprites[x], self.x+(8*x-8), self.y)
+    end
+
+    if game.frame % game.tickframes == 0 and self.state == tank_states.shooting and game.ship.state != ship_states.escaping
+    then
+        -- tank is firing
+        spr(65,self.x,self.y)
+        spr(self.fire_sprite,self.x,self.y)
+        spr(self.bullet_sprite, self.x-16,self.y)
     end
 end
 
@@ -1156,6 +1269,89 @@ function livesscreen:draw()
     
 end
 
+monster = {
+    x = 12,
+    y = 96,
+    sprites = {128,129,144,145},
+    delay=60,
+    currentcolor=1,
+    frames=12,
+    currentframe=1,
+    xmod=-1,
+    ymod=-1,
+    anims={
+        {
+            {128,129,144,145},{130,131,146,147}
+        },
+        {
+            {132,133,148,149},{134,135,150,151}
+        },
+        {
+            {160,161,176,177},{162,163,178,179}
+        },
+        {
+            {164,165,180,181},{166,167,182,183}
+        }
+    }
+}
+
+function monster:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function monster:update()
+    if self.delay > 0
+    then
+        self.delay-=1
+        return
+    end
+
+    if game.frame%2==0
+    then
+        -- work out new coords here
+        self.x+=self.xmod
+        if self.x<=game.level.pitcoords[1][1] or self.x>=game.level.pitcoords[2][1]-16
+        then
+            self.xmod=-1*self.xmod
+        end
+
+        self.y+=self.ymod
+        if self.y<=game.level.pitcoords[1][2]+11 or self.y>=game.level.pitcoords[2][2]-4
+        then
+            self.ymod=-1*self.ymod
+        end
+    end
+    if game.frame%self.frames==0 
+    then 
+        self.sprites=self.anims[self.currentcolor][self.currentframe]
+        self.currentframe=self.currentframe%2+1 
+    end
+
+    if (game.frame%30==0) self.currentcolor+=1
+    if (self.currentcolor>4) self.currentcolor=1
+end
+
+function monster:draw()
+    spr(self.sprites[1], self.x, self.y)
+    spr(self.sprites[2], self.x+8, self.y)
+    if self.y < game.level.pitcoords[2][2]-8
+    then
+        spr(self.sprites[3], self.x, self.y+8)
+        spr(self.sprites[4], self.x+8, self.y+8)
+    end
+
+    -- draw the green gunge over the sprite
+    local cellcoords=utilities.point_coords_to_cells(game.level.pitcoords[2][1],game.level.pitcoords[2][2])
+
+    for x=1,3 do
+        spr(68,game.level.pitcoords[2][1]-32+x*8,game.level.pitcoords[2][2]) 
+    end
+    
+end
+
 utilities = {
     lowest_pfr = -1
 }
@@ -1220,6 +1416,17 @@ function utilities:get_adjacent_spaces(dir, dig, x, y)
     if dir==3 then coords={x, x+7, y+8, y+ymod2} end -- down
     
     return coords
+end
+
+-- checks for an overlap of two boxes
+-- coords = {x1,x2,y1,y2} describing a shape with corners at x1,y1 and x2,y2
+-- return 1 if overlap
+function utilities:check_overlap(coords1,coords2)
+    if coords1[1] < coords2[2] and coords2[1] <= coords1[2] and coords1[3] < coords2[4] and coords2[3] <= coords1[4]
+    then
+        return 1
+    end           
+    return 0
 end
 
 

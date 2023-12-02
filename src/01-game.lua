@@ -18,7 +18,12 @@ game = {
     state=game_states.waiting,
     ship={},
     tank={},
-    frame=0
+    monster={},
+    frame=0,
+    mountain={10,9,8,7,6,5,4},
+    currentmountain=1,
+    currentmountaincount=0,
+    tickframes=15 -- how many frames before we process the timer?
 }
 
 function game:init()
@@ -32,13 +37,9 @@ function game:init()
     view={}
     view.y=0 -- key for tracking the viewport
 
-    self.reset()
+    self:reset()
 
     screen:init()
-
-    -- Create a new ship and tank
-    self.ship = ship:new()
-    self.tank = tank:new()
 
     self.state = game_states.running
 end
@@ -56,11 +57,11 @@ end
 function game:update()
 
     self.frame+=1
-    if (self.frame>30) self.frame=0
+    if (self.frame>3000) self.frame=0
 
     -- update the ship only if needed
     self.ship:update()
-    if self.ship.state == ship_states.landing
+    if self.ship.state == ship_states.landing or self.ship.state == ship_states.escaping
     then
         return;
     end
@@ -86,8 +87,11 @@ function game:update()
         self.tank:update()
     end
 
+    self.monster:update()
+
     player:update()
     screen:update()
+    game:update_timer()
 end
 
 function game:draw()
@@ -113,6 +117,10 @@ function game:draw()
 
     self.tank:draw()
 
+    self:draw_timer()
+
+    self.monster:draw()
+
     if self.ship.state == ship_states.landed
     then
         screen:draw_scores()
@@ -124,6 +132,11 @@ function game:reset()
     
     view.y=0
 
+    -- Create a new ship and tank
+    self.ship = ship:new()
+    self.tank = tank:new()
+    self.monster = monster:new()
+
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
 
@@ -133,8 +146,63 @@ function game:reset()
     diamonds={}
     gems={}
 
+    game.currentmountain=1
+    game.currentmountaincount=0
+
     screen:init()
 
+end
+
+function game:update_timer()
+
+    if (self.frame % game.tickframes != 0 or self.tank.state != tank_states.shooting) return
+
+    if self.currentmountain > #self.mountain
+    then
+        view.y = 0
+        self.ship.state = ship_states.escaping
+        return
+    end
+
+    -- update count 
+    self.currentmountaincount+=1
+
+    local currentsprite = mget(self.mountain[self.currentmountain], 1)
+    
+    -- if this is the last count, check tile above current
+    if self.currentmountaincount % 4 == 0 or currentsprite == 66 or currentsprite == 67 -- the slope tiles only take a single hit
+    then
+        self.currentmountaincount=0
+        -- get the sprite above current
+        local sprite = mget(self.mountain[self.currentmountain], 0)
+        if sprite==65
+        then
+            -- is empty, so move to next mountain
+            mset(self.mountain[self.currentmountain], 1, 65)
+            self.currentmountain+=1
+        else
+            -- is not empty, so copy current sprite down and clear above
+            mset(self.mountain[self.currentmountain], 1, sprite)
+            mset(self.mountain[self.currentmountain], 0, 65)
+        end
+    end
+
+end
+
+function game:draw_timer()
+    if self.currentmountaincount > 0
+    then
+        local first = 1
+        for x=8-self.currentmountaincount*2, 8, 2 do 
+            local c = 1
+            if (first == 1) c = 8
+            for y=8,15 do 
+                pset(x+8*self.mountain[self.currentmountain],y,c)
+                pset(x+8*self.mountain[self.currentmountain]+1,y,c)
+            end
+            first = 0            
+        end
+    end
 end
 
 function game:show_gameover()

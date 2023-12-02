@@ -64,6 +64,17 @@ function utilities:get_adjacent_spaces(dir, dig, x, y)
     return coords
 end
 
+-- checks for an overlap of two boxes
+-- coords = {x1,x2,y1,y2} describing a shape with corners at x1,y1 and x2,y2
+-- return 1 if overlap
+function utilities:check_overlap(coords1,coords2)
+    if coords1[1] < coords2[2] and coords2[1] <= coords1[2] and coords1[3] < coords2[4] and coords2[3] <= coords1[4]
+    then
+        return 1
+    end           
+    return 0
+end
+
 
 function utilities:print_debug()
     if self.lowest_pfr == -1 or stat(9) < utilities.lowest_pfr

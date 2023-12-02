@@ -135,7 +135,7 @@ function player:lose_life()
         game:show_gameover()
     else
         self:reset()
-        game.reset()
+        game:reset()
         livesscreen:init()
     end
 end
@@ -143,11 +143,10 @@ end
 -- check for player in the range specified
 -- return 1 if found, 0 if not
 function player:check_for_player(x1,x2,y1,y2)
-    if x1 < self.x+8 and self.x <= x2 and y1 < self.y+8 and self.y <= y2
-         then
-            return 1
-        end           
-    return 0
+    local coords1 = {x1,x2,y1,y2}
+    local coords2 = {self.x,self.x+8,self.y,self.y+8}
+
+    return utilities:check_overlap(coords1,coords2)
 end
 
 function player:kill_player(state)
@@ -174,20 +173,39 @@ function player:check_location()
 end
 
 -- check a range of pixels that the player is about to move into
--- if can move return 0
--- if can't move return 1
+-- if can't move return 0
+-- if can move return 1
 function player:check_can_move(dir)
-    local result = 0
+    local result = 1
     local coords = self:get_player_adjacent_spaces(dir,0)
-    for x=coords[1],coords[2] do 
-        for y=coords[3], coords[4] do 
-            local pixelc = pget(x,y)
-            -- Not blank or dirt, so can't move
-            if pixelc != 0 then return 1 end
-        end
+    
+    -- if rock, can't move
+    for r in all(rocks) do
+        local coords2 = {r.x,r.x+8,r.y,r.y+8}
+        local overlap = utilities:check_overlap(coords,coords2)
+        if (overlap==1) return 0
     end
 
-    return result
+    -- if bomb, can't move
+    for b in all(bombs) do
+        local coords2 = {b.x,b.x+8,b.y,b.y+8}
+        local overlap = utilities:check_overlap(coords,coords2)
+        if (overlap==1) return 0
+    end
+
+    -- if contains block, can't move
+    local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
+    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64
+    then
+        return 0
+    end
+
+    -- if contains dirt, can't move - will dig
+    local dirtfound=game:check_for_dirt(coords[1],coords[3],coords[2],coords[4])
+    if (dirtfound==1) return 0
+
+    -- otherwise, can move
+    return 1
 end
 
 -- try to dig a range of pixels
@@ -221,9 +239,8 @@ function player:move(x,y,s1,s2,d,auto)
     -- only check movement if this is auto movement
     if auto==0
     then
-        local preventmove=0
-        preventmove=self:check_can_move(d)
-        if preventmove!=0 
+        local canmove=self:check_can_move(d)
+        if canmove!=1
         then 
             self:try_to_dig(d)
             self.dir=d
