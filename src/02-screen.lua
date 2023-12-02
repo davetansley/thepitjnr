@@ -22,7 +22,7 @@ end
 
 function screen:draw_zonk()
     rectfill(player.x-9,player.y+1,player.x+14,player.y+7,10)
-    print("ZONK!!", player.x-8,player.y+2,0)
+    print("zonk!!", player.x-8,player.y+2,0)
 end
 
 function screen:draw_scores()
@@ -65,6 +65,12 @@ function screen:populate_map()
                 local d = diamond:new()
                 d:set_coords(x,y)
                 add(diamonds,d)
+            elseif sprite==86 -- gem
+            then
+                mset(x,y,255)
+                local g = gem:new()
+                g:set_coords(x,y)
+                add(gems,g)
             elseif sprite== 70 -- dirt
             then
                 -- initialise a dirt tile

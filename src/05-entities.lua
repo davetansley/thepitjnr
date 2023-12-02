@@ -144,6 +144,26 @@ function entity:check_can_fall()
     return 1
 end
 
+-- check if a pickup is overlapping the player. If so, collect
+function entity:update_pickup(score)
+    if self.framecount>=self.anims[self.state].fr
+    then
+        self.animindex = (self.animindex % #self.anims[self.state]) + 1
+        self.sprite =  self.anims[self.state][self.animindex]
+        self.framecount=1
+    else
+        self.framecount+=1
+    end 
+
+    if player:check_for_player(self.x,self.x+8,self.y,self.y+8)==1 and self.state == entity_states.idle
+    then
+        self.state = entity_states.invisible
+        player:add_score(score)
+        sfx(0)
+    end
+end
+
+
 -- subclasses of entity
 rock = entity:new(
     {
@@ -198,13 +218,21 @@ diamond = entity:new(
 )
 
 function diamond:update()
-    if self.framecount>=self.anims[self.state].fr
-    then
-        self.animindex = (self.animindex % #self.anims[self.state]) + 1
-        self.sprite =  self.anims[self.state][self.animindex]
-        self.framecount=1
-    else
-        self.framecount+=1
-    end 
+    self:update_pickup(scores.diamond)
+end
+
+gem = entity:new(
+    {
+        type = entity_types.gem,
+        sprite = 86, 
+        anims = {
+            idle={fr=2,86,87,88},
+            invisible={fr=1,255}
+        }
+    }
+)
+
+function gem:update()
+    self:update_pickup(scores.gem)
 end
 

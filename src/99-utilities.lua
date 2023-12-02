@@ -1,4 +1,6 @@
-utilities = {}
+utilities = {
+    lowest_pfr = -1
+}
 
 function utilities.pad_number(input)
     output=tostr(input)
@@ -63,8 +65,12 @@ function utilities:get_adjacent_spaces(dir, dig, x, y)
 end
 
 
-function utilities.printdebug()
-    printh("CPU: "..stat(1))
+function utilities:print_debug()
+    if self.lowest_pfr == -1 or stat(9) < utilities.lowest_pfr
+    then
+        self.lowest_pfr = stat(9)
+    end
+    printh(" FR: "..stat(7).." TFR: "..stat(8).." PFR: "..stat(9).." LowPFR: "..utilities.lowest_pfr.." CPU: "..stat(1))
 end
 
 function utilities.print_text(text, line, colour)

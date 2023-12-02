@@ -6,7 +6,7 @@ end
 -- update
 function _update()
     update()
-    --utilities.printdebug()
+    --utilities:print_debug()
 end
 
 -- draw

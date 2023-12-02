@@ -190,34 +190,6 @@ function player:check_can_move(dir)
     return result
 end
 
--- check a range of pixels that the player is about to move into
--- return 1 if found
-function player:check_for_gem(dir)
-    local result = 0
-    local coords = self:get_player_adjacent_spaces(dir,0)
-    
-    local count=#diamonds
-    for x=1,count do 
-        local diamond=diamonds[x]
-        
-        if diamond.state == entity_states.idle
-            then
-            
-            -- check if coords of diamond are inside the box
-            if diamond.x >= coords[1] and diamond.x <= coords[2]
-                and diamond.y >= coords[3] and diamond.y <= coords[4]
-                then
-                    diamond.state = entity_states.invisible
-                    player:add_score(scores.diamond)
-                    sfx(0)
-                    return 1
-                end            
-            end
-    end
-
-    return 0
-end
-
 -- try to dig a range of pixels
 function player:try_to_dig(dir)
     local coords = self:get_player_adjacent_spaces(dir,1)
@@ -231,10 +203,9 @@ function player:try_to_dig(dir)
             self.oldsprite=self.sprite
         end
         self.state=player_states.digging
-        self.stateframes=10
+        self.stateframes=7
         self.sprite=6+dir
     end
-    
 end
 
 function player:get_player_adjacent_spaces(dir,dig)
@@ -254,10 +225,6 @@ function player:move(x,y,s1,s2,d,auto)
         preventmove=self:check_can_move(d)
         if preventmove!=0 
         then 
-            -- Check for gem
-            local gem=self:check_for_gem(d)
-            if gem==1 then return 0 end
-            -- Can't move so try to dig
             self:try_to_dig(d)
             self.dir=d
             return 0 

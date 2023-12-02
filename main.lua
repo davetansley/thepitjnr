@@ -6,7 +6,7 @@ end
 -- update
 function _update()
     update()
-    --utilities.printdebug()
+    --utilities:print_debug()
 end
 
 -- draw
@@ -16,6 +16,7 @@ end
 
 scores={
     diamond=10,
+    gem=5,
     singlebonus=500,
     doublebonus=1000,
     triplebonus=1500
@@ -31,7 +32,8 @@ game = {
     highscore=100,
     state=game_states.waiting,
     ship={},
-    tank={}
+    tank={},
+    frame=0
 }
 
 function game:init()
@@ -68,10 +70,13 @@ end
 
 function game:update()
 
+    self.frame+=1
+    if (self.frame>30) self.frame=0
+
     -- update the ship only if needed
+    self.ship:update()
     if self.ship.state == ship_states.landing
     then
-        self.ship:update()
         return;
     end
 
@@ -84,6 +89,10 @@ function game:update()
     end
 
     for r in all(diamonds) do
+        r:update()
+    end
+
+    for r in all(gems) do
         r:update()
     end
 
@@ -111,6 +120,10 @@ function game:draw()
         r:draw()
     end
 
+    for r in all(gems) do
+        r:draw()
+    end
+
     self.ship:draw()
 
     self.tank:draw()
@@ -133,6 +146,7 @@ function game:reset()
     rocks={}
     bombs={}
     diamonds={}
+    gems={}
 
     screen:init()
 
@@ -265,7 +279,7 @@ end
 
 function screen:draw_zonk()
     rectfill(player.x-9,player.y+1,player.x+14,player.y+7,10)
-    print("ZONK!!", player.x-8,player.y+2,0)
+    print("zonk!!", player.x-8,player.y+2,0)
 end
 
 function screen:draw_scores()
@@ -308,6 +322,12 @@ function screen:populate_map()
                 local d = diamond:new()
                 d:set_coords(x,y)
                 add(diamonds,d)
+            elseif sprite==86 -- gem
+            then
+                mset(x,y,255)
+                local g = gem:new()
+                g:set_coords(x,y)
+                add(gems,g)
             elseif sprite== 70 -- dirt
             then
                 -- initialise a dirt tile
@@ -549,34 +569,6 @@ function player:check_can_move(dir)
     return result
 end
 
--- check a range of pixels that the player is about to move into
--- return 1 if found
-function player:check_for_gem(dir)
-    local result = 0
-    local coords = self:get_player_adjacent_spaces(dir,0)
-    
-    local count=#diamonds
-    for x=1,count do 
-        local diamond=diamonds[x]
-        
-        if diamond.state == entity_states.idle
-            then
-            
-            -- check if coords of diamond are inside the box
-            if diamond.x >= coords[1] and diamond.x <= coords[2]
-                and diamond.y >= coords[3] and diamond.y <= coords[4]
-                then
-                    diamond.state = entity_states.invisible
-                    player:add_score(scores.diamond)
-                    sfx(0)
-                    return 1
-                end            
-            end
-    end
-
-    return 0
-end
-
 -- try to dig a range of pixels
 function player:try_to_dig(dir)
     local coords = self:get_player_adjacent_spaces(dir,1)
@@ -590,10 +582,9 @@ function player:try_to_dig(dir)
             self.oldsprite=self.sprite
         end
         self.state=player_states.digging
-        self.stateframes=10
+        self.stateframes=7
         self.sprite=6+dir
     end
-    
 end
 
 function player:get_player_adjacent_spaces(dir,dig)
@@ -613,10 +604,6 @@ function player:move(x,y,s1,s2,d,auto)
         preventmove=self:check_can_move(d)
         if preventmove!=0 
         then 
-            -- Check for gem
-            local gem=self:check_for_gem(d)
-            if gem==1 then return 0 end
-            -- Can't move so try to dig
             self:try_to_dig(d)
             self.dir=d
             return 0 
@@ -827,6 +814,26 @@ function entity:check_can_fall()
     return 1
 end
 
+-- check if a pickup is overlapping the player. If so, collect
+function entity:update_pickup(score)
+    if self.framecount>=self.anims[self.state].fr
+    then
+        self.animindex = (self.animindex % #self.anims[self.state]) + 1
+        self.sprite =  self.anims[self.state][self.animindex]
+        self.framecount=1
+    else
+        self.framecount+=1
+    end 
+
+    if player:check_for_player(self.x,self.x+8,self.y,self.y+8)==1 and self.state == entity_states.idle
+    then
+        self.state = entity_states.invisible
+        player:add_score(score)
+        sfx(0)
+    end
+end
+
+
 -- subclasses of entity
 rock = entity:new(
     {
@@ -881,14 +888,22 @@ diamond = entity:new(
 )
 
 function diamond:update()
-    if self.framecount>=self.anims[self.state].fr
-    then
-        self.animindex = (self.animindex % #self.anims[self.state]) + 1
-        self.sprite =  self.anims[self.state][self.animindex]
-        self.framecount=1
-    else
-        self.framecount+=1
-    end 
+    self:update_pickup(scores.diamond)
+end
+
+gem = entity:new(
+    {
+        type = entity_types.gem,
+        sprite = 86, 
+        anims = {
+            idle={fr=2,86,87,88},
+            invisible={fr=1,255}
+        }
+    }
+)
+
+function gem:update()
+    self:update_pickup(scores.gem)
 end
 
 titlescreen = {
@@ -930,7 +945,7 @@ function titlescreen:update()
 end
 
 function titlescreen:draw()
-    cls(0)
+    cls(1)
 
     local thexbase = 8
     local theybase = 14
@@ -958,12 +973,10 @@ ship_states = {
 }
 
 ship = {
-    x = 0,
+    x = 12,
     y = 0,
     sprites = {96,97},
     state = ship_states.landing,
-    framesperupdate=4,
-    frames=0,
     anims={
         {96,97},{98,99}
     }
@@ -977,14 +990,19 @@ function ship:new(o)
 end
 
 function ship:update()
-    self.frames+=1
-    if self.frames==self.framesperupdate
+
+    if self.state==ship_states.landed 
+    then
+        if (self.x > 0 and game.frame%2==0) self.x-=1 
+        return
+    end
+
+    if game.frame%3==0
     then
         self.y += 1
-        self.frames=0
     end
     if self.y == 8 then self.state = ship_states.landed end    
-    if self.frames%2==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+    if game.frame%2==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
 end
 
 function ship:draw()
@@ -1138,7 +1156,9 @@ function livesscreen:draw()
     
 end
 
-utilities = {}
+utilities = {
+    lowest_pfr = -1
+}
 
 function utilities.pad_number(input)
     output=tostr(input)
@@ -1203,8 +1223,12 @@ function utilities:get_adjacent_spaces(dir, dig, x, y)
 end
 
 
-function utilities.printdebug()
-    printh("CPU: "..stat(1))
+function utilities:print_debug()
+    if self.lowest_pfr == -1 or stat(9) < utilities.lowest_pfr
+    then
+        self.lowest_pfr = stat(9)
+    end
+    printh(" FR: "..stat(7).." TFR: "..stat(8).." PFR: "..stat(9).." LowPFR: "..utilities.lowest_pfr.." CPU: "..stat(1))
 end
 
 function utilities.print_text(text, line, colour)

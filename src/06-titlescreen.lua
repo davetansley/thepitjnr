@@ -37,7 +37,7 @@ function titlescreen:update()
 end
 
 function titlescreen:draw()
-    cls(0)
+    cls(1)
 
     local thexbase = 8
     local theybase = 14

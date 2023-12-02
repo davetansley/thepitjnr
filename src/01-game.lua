@@ -1,6 +1,7 @@
 
 scores={
     diamond=10,
+    gem=5,
     singlebonus=500,
     doublebonus=1000,
     triplebonus=1500
@@ -16,7 +17,8 @@ game = {
     highscore=100,
     state=game_states.waiting,
     ship={},
-    tank={}
+    tank={},
+    frame=0
 }
 
 function game:init()
@@ -53,10 +55,13 @@ end
 
 function game:update()
 
+    self.frame+=1
+    if (self.frame>30) self.frame=0
+
     -- update the ship only if needed
+    self.ship:update()
     if self.ship.state == ship_states.landing
     then
-        self.ship:update()
         return;
     end
 
@@ -69,6 +74,10 @@ function game:update()
     end
 
     for r in all(diamonds) do
+        r:update()
+    end
+
+    for r in all(gems) do
         r:update()
     end
 
@@ -96,6 +105,10 @@ function game:draw()
         r:draw()
     end
 
+    for r in all(gems) do
+        r:draw()
+    end
+
     self.ship:draw()
 
     self.tank:draw()
@@ -118,6 +131,7 @@ function game:reset()
     rocks={}
     bombs={}
     diamonds={}
+    gems={}
 
     screen:init()
 
