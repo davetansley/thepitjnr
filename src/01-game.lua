@@ -19,6 +19,7 @@ game = {
     ship={},
     tank={},
     monster={},
+    robots={},
     frame=0,
     mountain={10,9,8,7,6,5,4},
     currentmountain=1,
@@ -82,6 +83,17 @@ function game:update()
         r:update()
     end
 
+    -- if we need a robot, spawn it
+    if self.tank.state==tank_states.shooting and #self.robots < self.level.robots and self.frame%5 == 0
+    then
+        local r = robot:new()
+        add(self.robots,r)
+    end
+
+    for r in all(self.robots) do
+        r:update()
+    end
+
     if self.tank.state == tank_states.moving
     then
         self.tank:update()
@@ -113,6 +125,10 @@ function game:draw()
         r:draw()
     end
 
+    for r in all(self.robots) do
+        r:draw()
+    end
+
     self.ship:draw()
 
     self.tank:draw()
@@ -136,6 +152,7 @@ function game:reset()
     self.ship = ship:new()
     self.tank = tank:new()
     self.monster = monster:new()
+    self.robots = {}
 
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)

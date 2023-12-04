@@ -1,27 +1,16 @@
 monster = {
     x = 12,
     y = 96,
-    sprites = {128,129,144,145},
+    sprites = {128,130},
     delay=60,
     currentcolor=1,
     frames=12,
     currentframe=1,
     xmod=-1,
     ymod=-1,
-    anims={
-        {
-            {128,129,144,145},{130,131,146,147}
-        },
-        {
-            {132,133,148,149},{134,135,150,151}
-        },
-        {
-            {160,161,176,177},{162,163,178,179}
-        },
-        {
-            {164,165,180,181},{166,167,182,183}
-        }
-    }
+    colors={8,10,14},
+    newcolors={8,10,14},
+    possiblecolors={2,3,4,5,6,8,9,10,11,12,13,14,15}
 }
 
 function monster:new(o)
@@ -47,15 +36,16 @@ function monster:update()
             self.xmod=-1*self.xmod
         end
 
-        self.y+=self.ymod
-        if self.y<=game.level.pitcoords[1][2]+11 or self.y>=game.level.pitcoords[2][2]-4
+        -- slow down rise above certain point
+        if self.y<=game.level.pitcoords[1][2]+15 then self.y += self.ymod else self.y+=self.ymod*3 end
+
+        if self.y<=game.level.pitcoords[1][2]+10 or self.y>=game.level.pitcoords[2][2]-4
         then
             self.ymod=-1*self.ymod
         end
     end
     if game.frame%self.frames==0 
     then 
-        self.sprites=self.anims[self.currentcolor][self.currentframe]
         self.currentframe=self.currentframe%2+1 
     end
 
@@ -64,13 +54,25 @@ function monster:update()
 end
 
 function monster:draw()
-    spr(self.sprites[1], self.x, self.y)
-    spr(self.sprites[2], self.x+8, self.y)
+    local height=1
+
+    -- generate new colors
+    if self.y >= game.level.pitcoords[2][2]-8 and self.delay == 0
+    then
+        self:generate_pallete()
+    end 
+
+    -- swap palette
+    pal(self.colors[1],self.newcolors[1])
+    pal(self.colors[2],self.newcolors[2])
+    pal(self.colors[3],self.newcolors[3])
+    
     if self.y < game.level.pitcoords[2][2]-8
     then
-        spr(self.sprites[3], self.x, self.y+8)
-        spr(self.sprites[4], self.x+8, self.y+8)
+        height=2
     end
+
+    spr(self.sprites[self.currentframe],self.x,self.y,2,height)
 
     -- draw the green gunge over the sprite
     local cellcoords=utilities.point_coords_to_cells(game.level.pitcoords[2][1],game.level.pitcoords[2][2])
@@ -78,6 +80,19 @@ function monster:draw()
     for x=1,3 do
         spr(68,game.level.pitcoords[2][1]-32+x*8,game.level.pitcoords[2][2]) 
     end
+    pal()
     
+end
+
+function monster:generate_pallete()
+    local i1,i2,i3,found = 0,0,0,0
+
+    while found == 0 do 
+        i1 = flr(rnd(#self.possiblecolors))+1
+        i2 = flr(rnd(#self.possiblecolors))+1
+        i3 = flr(rnd(#self.possiblecolors))+1
+        if (i1 != i2 and i1 != i3) found = 1
+    end
+    self.newcolors={self.possiblecolors[i1],self.possiblecolors[i2],self.possiblecolors[i3]}
 end
 

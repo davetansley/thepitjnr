@@ -34,6 +34,7 @@ game = {
     ship={},
     tank={},
     monster={},
+    robots={},
     frame=0,
     mountain={10,9,8,7,6,5,4},
     currentmountain=1,
@@ -97,6 +98,17 @@ function game:update()
         r:update()
     end
 
+    -- if we need a robot, spawn it
+    if self.tank.state==tank_states.shooting and #self.robots < self.level.robots and self.frame%5 == 0
+    then
+        local r = robot:new()
+        add(self.robots,r)
+    end
+
+    for r in all(self.robots) do
+        r:update()
+    end
+
     if self.tank.state == tank_states.moving
     then
         self.tank:update()
@@ -128,6 +140,10 @@ function game:draw()
         r:draw()
     end
 
+    for r in all(self.robots) do
+        r:draw()
+    end
+
     self.ship:draw()
 
     self.tank:draw()
@@ -151,6 +167,7 @@ function game:reset()
     self.ship = ship:new()
     self.tank = tank:new()
     self.monster = monster:new()
+    self.robots = {}
 
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
@@ -442,7 +459,8 @@ levels={
     {
         level=1,
         caverncoords={{40,160},{80,184}},
-        pitcoords={{8,72},{32,104}},    
+        pitcoords={{8,72},{32,104}}, 
+        robots=1   
     }
 }
 player_states = {
@@ -1272,27 +1290,16 @@ end
 monster = {
     x = 12,
     y = 96,
-    sprites = {128,129,144,145},
+    sprites = {128,130},
     delay=60,
     currentcolor=1,
     frames=12,
     currentframe=1,
     xmod=-1,
     ymod=-1,
-    anims={
-        {
-            {128,129,144,145},{130,131,146,147}
-        },
-        {
-            {132,133,148,149},{134,135,150,151}
-        },
-        {
-            {160,161,176,177},{162,163,178,179}
-        },
-        {
-            {164,165,180,181},{166,167,182,183}
-        }
-    }
+    colors={8,10,14},
+    newcolors={8,10,14},
+    possiblecolors={2,3,4,5,6,8,9,10,11,12,13,14,15}
 }
 
 function monster:new(o)
@@ -1318,15 +1325,16 @@ function monster:update()
             self.xmod=-1*self.xmod
         end
 
-        self.y+=self.ymod
-        if self.y<=game.level.pitcoords[1][2]+11 or self.y>=game.level.pitcoords[2][2]-4
+        -- slow down rise above certain point
+        if self.y<=game.level.pitcoords[1][2]+15 then self.y += self.ymod else self.y+=self.ymod*3 end
+
+        if self.y<=game.level.pitcoords[1][2]+10 or self.y>=game.level.pitcoords[2][2]-4
         then
             self.ymod=-1*self.ymod
         end
     end
     if game.frame%self.frames==0 
     then 
-        self.sprites=self.anims[self.currentcolor][self.currentframe]
         self.currentframe=self.currentframe%2+1 
     end
 
@@ -1335,13 +1343,25 @@ function monster:update()
 end
 
 function monster:draw()
-    spr(self.sprites[1], self.x, self.y)
-    spr(self.sprites[2], self.x+8, self.y)
+    local height=1
+
+    -- generate new colors
+    if self.y >= game.level.pitcoords[2][2]-8 and self.delay == 0
+    then
+        self:generate_pallete()
+    end 
+
+    -- swap palette
+    pal(self.colors[1],self.newcolors[1])
+    pal(self.colors[2],self.newcolors[2])
+    pal(self.colors[3],self.newcolors[3])
+    
     if self.y < game.level.pitcoords[2][2]-8
     then
-        spr(self.sprites[3], self.x, self.y+8)
-        spr(self.sprites[4], self.x+8, self.y+8)
+        height=2
     end
+
+    spr(self.sprites[self.currentframe],self.x,self.y,2,height)
 
     -- draw the green gunge over the sprite
     local cellcoords=utilities.point_coords_to_cells(game.level.pitcoords[2][1],game.level.pitcoords[2][2])
@@ -1349,7 +1369,80 @@ function monster:draw()
     for x=1,3 do
         spr(68,game.level.pitcoords[2][1]-32+x*8,game.level.pitcoords[2][2]) 
     end
+    pal()
     
+end
+
+function monster:generate_pallete()
+    local i1,i2,i3,found = 0,0,0,0
+
+    while found == 0 do 
+        i1 = flr(rnd(#self.possiblecolors))+1
+        i2 = flr(rnd(#self.possiblecolors))+1
+        i3 = flr(rnd(#self.possiblecolors))+1
+        if (i1 != i2 and i1 != i3) found = 1
+    end
+    self.newcolors={self.possiblecolors[i1],self.possiblecolors[i2],self.possiblecolors[i3]}
+end
+
+robot = {
+    x = 112,
+    y = 16,
+    dir = 1, -- 0 right, 1, left, 2 up, 3 down
+    flipx = true,
+    sprites = {132,133,134,135},
+    currentframe=1,
+    colors={8,11,12},
+    newcolors={8,11,12},
+    possiblecolors={7,8,9,10,11,12,13,14}
+}
+
+function robot:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+
+    self:generate_pallete()
+
+    return o
+end
+
+function robot:update()
+    if self.dir == 0 
+    then
+        self.flipx = false 
+    else
+        self.flipx = true 
+    end
+
+    if game.frame%15 == 0
+    then
+        self.currentframe+=1
+        if (self.currentframe > 4) self.currentframe = 1
+    end
+end
+
+function robot:draw()
+    
+    pal(self.colors[1],self.newcolors[1])
+    pal(self.colors[2],self.newcolors[2])
+    pal(self.colors[3],self.newcolors[3])
+
+    spr(self.sprites[self.currentframe], self.x, self.y, 1, 1, self.flipx )
+    
+    pal()
+end
+
+function robot:generate_pallete()
+    local i1,i2,i3,found = 0,0,0,0
+
+    while found == 0 do 
+        i1 = flr(rnd(#self.possiblecolors))+1
+        i2 = flr(rnd(#self.possiblecolors))+1
+        i3 = flr(rnd(#self.possiblecolors))+1
+        if (i1 != i2 and i1 != i3) found = 1
+    end
+    self.newcolors={self.possiblecolors[i1],self.possiblecolors[i2],self.possiblecolors[i3]}
 end
 
 utilities = {
