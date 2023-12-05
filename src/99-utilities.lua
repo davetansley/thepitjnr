@@ -64,6 +64,21 @@ function utilities:get_adjacent_spaces(dir, dig, x, y)
     return coords
 end
 
+-- get range of spaces adjacent to the place in the direction specified
+-- if dig is 1, get the square vertically, otherwise just 8 pixels (horiz is always a square)
+function utilities:get_adjacent_or_current_space(dir, x, y)
+    local coords = {}
+    local ymod1 = -1
+    local ymod2 = 8
+
+    if dir==0 then coords={x+1, y} end -- right
+    if dir==1 then coords={x-1, y} end -- left
+    if dir==2 then coords={x, y-1} end -- up
+    if dir==3 then coords={x, y+8} end -- down
+    
+    return coords
+end
+
 -- checks for an overlap of two boxes
 -- coords = {x1,x2,y1,y2} describing a shape with corners at x1,y1 and x2,y2
 -- return 1 if overlap

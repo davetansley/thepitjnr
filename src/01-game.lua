@@ -24,7 +24,7 @@ game = {
     mountain={10,9,8,7,6,5,4},
     currentmountain=1,
     currentmountaincount=0,
-    tickframes=15 -- how many frames before we process the timer?
+    tickframes=150 -- how many frames before we process the timer?
 }
 
 function game:init()
@@ -84,9 +84,10 @@ function game:update()
     end
 
     -- if we need a robot, spawn it
-    if self.tank.state==tank_states.shooting and #self.robots < self.level.robots and self.frame%5 == 0
+    if self.tank.state==tank_states.shooting and #self.robots < self.level.robots and self.frame%150 == 0
     then
         local r = robot:new()
+        r:generate_pallete()
         add(self.robots,r)
     end
 
@@ -100,8 +101,10 @@ function game:update()
     end
 
     self.monster:update()
-
-    player:update()
+    if self.ship.state == ship_states.landed
+    then
+        player:update()
+    end
     screen:update()
     game:update_timer()
 end

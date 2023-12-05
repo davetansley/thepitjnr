@@ -3,7 +3,8 @@ player_states = {
     digging = 1,
     shooting = 2,
     squashed = 3,
-    bombed = 4
+    bombed = 4,
+    mauled = 5
 }
 
 player={
@@ -56,12 +57,25 @@ end
 
 -- return 1 if the player is dying
 function player:is_dying()
-    if self.state==player_states.crushed or self.state==player_states.bombed then return 1 end 
+    if self.state==player_states.crushed or self.state==player_states.bombed or self.state==player_states.mauled then return 1 end 
     return 0
 end
 
 -- update the player state
 function player:update_player()
+
+    if self.state==player_states.mauled
+    then
+        if (game.frame%2 != 0) return
+        -- Player is being mauled
+        if self.sprite == 2 then self.sprite=0 else self.sprite=2 end
+        self.stateframes-=1
+        if self.stateframes==0
+            then
+                self:lose_life()
+            end
+        return
+    end
 
     if self.state==player_states.crushed
     then
@@ -193,9 +207,10 @@ function player:check_can_move(dir)
         if (overlap==1) return 0
     end
 
-    -- if contains block, can't move
+    -- if contains block or sky, can't move
     local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
-    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64
+    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64 or 
+        mget(cellcoords[1], cellcoords[2])==65 or mget(cellcoords[3],cellcoords[4])==65
     then
         return 0
     end
