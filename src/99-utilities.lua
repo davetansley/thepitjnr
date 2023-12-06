@@ -90,6 +90,42 @@ function utilities:check_overlap(coords1,coords2)
     return 0
 end
 
+-- check a range of pixels that the entity is about to move into
+-- if can't move return 0
+-- if can move return 1
+function utilities:check_can_move(dir, coords)
+    local result = 1
+    
+    -- if rock, can't move
+    for r in all(rocks) do
+        local coords2 = {r.x,r.x+8,r.y,r.y+8}
+        local overlap = utilities:check_overlap(coords,coords2)
+        if (overlap==1) return 0
+    end
+
+    -- if bomb, can't move
+    for b in all(bombs) do
+        local coords2 = {b.x,b.x+8,b.y,b.y+8}
+        local overlap = utilities:check_overlap(coords,coords2)
+        if (overlap==1) return 0
+    end
+
+    -- if contains block or sky, can't move
+    local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
+    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64 or 
+        mget(cellcoords[1], cellcoords[2])==65 or mget(cellcoords[3],cellcoords[4])==65
+    then
+        return 0
+    end
+
+    -- if contains dirt, can't move
+    local dirtfound=game:check_for_dirt(coords[1],coords[3],coords[2],coords[4])
+    if (dirtfound==1) return 0
+
+    -- otherwise, can move
+    return 1
+end
+
 
 function utilities:print_debug()
     if self.lowest_pfr == -1 or stat(9) < utilities.lowest_pfr

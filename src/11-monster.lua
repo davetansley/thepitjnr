@@ -27,19 +27,21 @@ function monster:update()
         return
     end
 
-    if game.frame%2==0
+    if game.frame%1==0
     then
         -- work out new coords here
-        self.x+=self.xmod
-        if self.x<=game.level.pitcoords[1][1] or self.x>=game.level.pitcoords[2][1]-16
+        if game.frame%2==0
         then
-            self.xmod=-1*self.xmod
+            self.x+=self.xmod
+            if self.x<=game.level.pitcoords[1][1] or self.x>=game.level.pitcoords[2][1]-16
+            then
+                self.xmod=-1*self.xmod
+            end
         end
-
         -- slow down rise above certain point
         if self.y<=game.level.pitcoords[1][2]+15 then self.y += self.ymod else self.y+=self.ymod*3 end
 
-        if self.y<=game.level.pitcoords[1][2]+10 or self.y>=game.level.pitcoords[2][2]-4
+        if self.y<=game.level.pitcoords[1][2]+2 or self.y>=game.level.pitcoords[2][2]-4
         then
             self.ymod=-1*self.ymod
         end

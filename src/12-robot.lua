@@ -9,7 +9,14 @@ robot = {
     newcolors={8,11,12},
     possiblecolors={7,8,9,10,11,12,13,14},
     autoframes=0,
-    killed=false -- has the robot killed the player
+    killed=false, -- has the robot killed the player
+    reversedirections = {
+        directions.left,
+        directions.right,
+        directions.down,
+        directions.up
+    }
+    
 }
 
 function robot:new(o)
@@ -30,29 +37,27 @@ function robot:update()
 
     if (player:is_dying() == 1) return -- freeze all other robots
 
-    if (game.frame%game.level.robotspeed != 0) return
+    -- for down and up, update every frame
+    if (game.frame%game.level.robotspeed != 0 and self.dir != directions.down and self.dir != directions.up) return
     
     if self.autoframes == 0
     then
         -- figure out where the player can move
         -- {right, left, up, down}
-        local moves = {self:check_can_move(0),self:check_can_move(1),self:check_can_move(2),self:check_can_move(3)}
-        local reversedirs={directions.left,directions.right,directions.down,directions.up}
-        local reversedir = reversedirs[self.dir+1]
-        local moved = 0
-        for m=1,4 do
-            -- if this isn't the current direction and direction is movable and random check
-            local prob = 7
-
-            if self.dir != m-1 and moves[m] == 1 and rnd(10) < prob and reversedir != m-1
-            then
-                moved = 1
-                self.dir = m-1
-            end 
-        end
-        -- if hasn't moved, reverse
-        if moved == 0 and moves[self.dir+1]==0
+        local moves = self:get_moves()        
+        local reversedir = self.reversedirections[self.dir+1]
+        
+        if #moves == 1
         then
+            -- just one possibility other than reverse, so take it
+            self.dir = moves[1]
+        elseif #moves > 1
+        then
+            -- chose a random direction
+            self.dir = moves[flr(rnd(#moves))+1]
+        elseif #moves != 3
+        then 
+            -- can't move, so reverse
             self.dir = reversedir
         end
 
@@ -107,48 +112,32 @@ function robot:check_kill()
     
 end
 
-
 function robot:get_robot_adjacent_spaces(dir)
     return utilities:get_adjacent_spaces(dir,0,self.x,self.y)
 end
 
--- check a range of pixels that the robot is about to move into
--- if can't move return 0
--- if can move return 1
-function robot:check_can_move(dir)
-    local result = 1
+-- get the directions that the robot can move in
+function robot:get_moves()
+    local reversedir = self.reversedirections[self.dir+1]
+    local moves = {}
+
+    moves = self:check_can_move(directions.up, reversedir, moves)
+    moves = self:check_can_move(directions.down, reversedir, moves)
+    moves = self:check_can_move(directions.right, reversedir, moves)
+    moves = self:check_can_move(directions.left, reversedir, moves)
+
+    return moves
+end
+
+function robot:check_can_move(dir, reversedir, moves)
+
+    if (dir == reversedir) return moves
+
     local coords = self:get_robot_adjacent_spaces(dir)
-    
-    if (self.y <= 32 and (dir == directions.right or dir == directions.up)) return 0
+    local canmove = utilities:check_can_move(dir,coords)
+    if (canmove == 1) add(moves, dir)
 
-    -- if rock, can't move
-    for r in all(rocks) do
-        local coords2 = {r.x,r.x+8,r.y,r.y+8}
-        local overlap = utilities:check_overlap(coords,coords2)
-        if (overlap==1) return 0
-    end
-
-    -- if bomb, can't move
-    for b in all(bombs) do
-        local coords2 = {b.x,b.x+8,b.y,b.y+8}
-        local overlap = utilities:check_overlap(coords,coords2)
-        if (overlap==1) return 0
-    end
-
-    -- if contains block or sky, can't move
-    local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
-    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64 or 
-        mget(cellcoords[1], cellcoords[2])==65 or mget(cellcoords[3],cellcoords[4])==65
-    then
-        return 0
-    end
-
-    -- if contains dirt, can't move - will dig
-    local dirtfound=game:check_for_dirt(coords[1],coords[3],coords[2],coords[4])
-    if (dirtfound==1) return 0
-
-    -- otherwise, can move
-    return 1
+    return moves
 end
 
 function robot:generate_pallete()
