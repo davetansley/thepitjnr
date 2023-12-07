@@ -65,11 +65,8 @@ function utilities:get_adjacent_spaces(dir, dig, x, y)
 end
 
 -- get range of spaces adjacent to the place in the direction specified
--- if dig is 1, get the square vertically, otherwise just 8 pixels (horiz is always a square)
 function utilities:get_adjacent_or_current_space(dir, x, y)
     local coords = {}
-    local ymod1 = -1
-    local ymod2 = 8
 
     if dir==0 then coords={x+1, y} end -- right
     if dir==1 then coords={x-1, y} end -- left

@@ -6,7 +6,7 @@ end
 -- update
 function _update()
     update()
-    utilities:print_debug()
+    --utilities:print_debug()
 end
 
 -- draw
@@ -1418,6 +1418,7 @@ robot = {
     possiblecolors={7,8,9,10,11,12,13,14},
     autoframes=0,
     killed=false, -- has the robot killed the player
+    alldirs=false,
     reversedirections = {
         directions.left,
         directions.right,
@@ -1454,19 +1455,27 @@ function robot:update()
         -- {right, left, up, down}
         local moves = self:get_moves()        
         local reversedir = self.reversedirections[self.dir+1]
-        
         if #moves == 1
         then
             -- just one possibility other than reverse, so take it
             self.dir = moves[1]
-        elseif #moves > 1
+            self.alldirs = false
+        elseif #moves == 2
         then
             -- chose a random direction
             self.dir = moves[flr(rnd(#moves))+1]
-        elseif #moves != 3
-        then 
+            self.alldirs = false
+        
+        elseif #moves == 3 and self.alldirs == false
+        then
+            -- chose a random direction
+            self.dir = moves[flr(rnd(#moves))+1]
+            self.alldirs = true
+        elseif #moves == 0
+        then
             -- can't move, so reverse
             self.dir = reversedir
+            self.alldirs = false
         end
 
         if self.dir == 0 or self.dir == 1 then self.autoframes = 7 end
@@ -1542,6 +1551,7 @@ function robot:check_can_move(dir, reversedir, moves)
     if (dir == reversedir) return moves
 
     local coords = self:get_robot_adjacent_spaces(dir)
+
     local canmove = utilities:check_can_move(dir,coords)
     if (canmove == 1) add(moves, dir)
 
@@ -1627,11 +1637,8 @@ function utilities:get_adjacent_spaces(dir, dig, x, y)
 end
 
 -- get range of spaces adjacent to the place in the direction specified
--- if dig is 1, get the square vertically, otherwise just 8 pixels (horiz is always a square)
 function utilities:get_adjacent_or_current_space(dir, x, y)
     local coords = {}
-    local ymod1 = -1
-    local ymod2 = 8
 
     if dir==0 then coords={x+1, y} end -- right
     if dir==1 then coords={x-1, y} end -- left
