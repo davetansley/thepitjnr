@@ -8,6 +8,11 @@ scores={
     robot=10, -- 100
 }
 
+-- game speeds in number of frames before next update
+game_speeds = {
+    bridge=8
+}
+
 game_states = {
     waiting = 0,
     running = 1
@@ -15,6 +20,7 @@ game_states = {
 
 game = {
     level={},
+    currentlevel=1,
     highscore=100,
     state=game_states.waiting,
     ship={},
@@ -25,14 +31,15 @@ game = {
     mountain={10,9,8,7,6,5,4},
     currentmountain=1,
     currentmountaincount=0,
-    tickframes=150 -- how many frames before we process the timer?
+    tickframes=150, -- how many frames before we process the timer?
+    bridge=24 -- how much is the bridge extended
 }
 
 function game:init()
     self.switchto()
 
     -- config variables
-    self.level = levels[1]
+    self.currentlevel=1
     player:init()
     
     -- viewport variables
@@ -63,7 +70,7 @@ function game:update()
 
     -- update the ship only if needed
     self.ship:update()
-    if self.ship.state == ship_states.landing or self.ship.state == ship_states.escaping
+    if self.ship.state == ship_states.landing or self.ship.state == ship_states.fleeing or self.ship.state == ship_states.escaping
     then
         return;
     end
@@ -110,6 +117,14 @@ function game:update()
     then
         player:update()
     end
+
+    if player.inpit==1 and game.frame%game_speeds.bridge==0
+    then
+        -- reduce pit bridge by 1
+        game.bridge-=1
+        if (game.bridge<0) game.bridge=0
+    end
+
     screen:update()
     game:update_timer()
 end
@@ -147,24 +162,27 @@ function game:draw()
 
     self:draw_timer()
 
-    self.monster:draw()
-
     if self.ship.state == ship_states.landed
     then
         screen:draw_scores()
         player:draw()
     end
+
+    self.monster:draw()
 end
 
 function game:reset()
     
     view.y=0
 
+    self.level = levels[self.currentlevel]
+
     -- Create a new ship and tank
     self.ship = ship:new()
     self.tank = tank:new()
     self.monster = monster:new()
     self.robots = {}
+    self.bridge = 24
 
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
@@ -183,6 +201,13 @@ function game:reset()
 
 end
 
+function game:next_level()
+    self.currentlevel+=1
+    player:reset()
+    self:reset()
+    levelendscreen:init()
+end
+
 function game:update_timer()
 
     if (self.frame % game.tickframes != 0 or self.tank.state != tank_states.shooting) return
@@ -190,14 +215,14 @@ function game:update_timer()
     if self.currentmountain > #self.mountain
     then
         view.y = 0
-        self.ship.state = ship_states.escaping
+        self.ship.state = ship_states.fleeing
         return
     end
 
     -- update count 
     self.currentmountaincount+=1
 
-    local currentsprite = mget(self.mountain[self.currentmountain], 1)
+    local currentsprite = mget(self.mountain[self.currentmountain]+screen.mapx, 1)
     
     -- if this is the last count, check tile above current
     if self.currentmountaincount % 4 == 0 or currentsprite == 66 or currentsprite == 67 -- the slope tiles only take a single hit
@@ -208,12 +233,12 @@ function game:update_timer()
         if sprite==65
         then
             -- is empty, so move to next mountain
-            mset(self.mountain[self.currentmountain], 1, 65)
+            mset(self.mountain[self.currentmountain]+screen.mapx, 1, 65)
             self.currentmountain+=1
         else
             -- is not empty, so copy current sprite down and clear above
-            mset(self.mountain[self.currentmountain], 1, sprite)
-            mset(self.mountain[self.currentmountain], 0, 65)
+            mset(self.mountain[self.currentmountain]+screen.mapx, 1, sprite)
+            mset(self.mountain[self.currentmountain]+screen.mapx, 0, 65)
         end
     end
 

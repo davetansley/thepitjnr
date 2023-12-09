@@ -51,7 +51,8 @@ function tank:draw()
         spr(self.sprites[x], self.x+(8*x-8), self.y)
     end
 
-    if game.frame % game.tickframes == 0 and self.state == tank_states.shooting and game.ship.state != ship_states.escaping
+    if game.frame % game.tickframes == 0 and self.state == tank_states.shooting and game.ship.state != ship_states.fleeing 
+            and game.ship.state != ship_states.escaping
     then
         -- tank is firing
         spr(65,self.x,self.y)

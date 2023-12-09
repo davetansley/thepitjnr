@@ -33,7 +33,7 @@ function monster:update()
         if game.frame%4==0
         then
             self.x+=self.xmod
-            if self.x<=game.level.pitcoords[1][1] or self.x>=game.level.pitcoords[2][1]-16
+            if self.x<=game.level.pitcoords[1][1] or self.x>=game.level.pitcoords[2][1]-8
             then
                 self.xmod=-1*self.xmod
             end
@@ -41,7 +41,7 @@ function monster:update()
         -- slow down rise above certain point
         if self.y<=game.level.pitcoords[1][2]+15 then self.y += self.ymod else self.y+=self.ymod*3 end
 
-        if self.y<=game.level.pitcoords[1][2]+2 or self.y>=game.level.pitcoords[2][2]-4
+        if self.y<=game.level.pitcoords[1][2]+10 or self.y>=game.level.pitcoords[2][2]-4
         then
             self.ymod=-1*self.ymod
         end
@@ -80,7 +80,7 @@ function monster:draw()
     local cellcoords=utilities.point_coords_to_cells(game.level.pitcoords[2][1],game.level.pitcoords[2][2])
 
     for x=1,3 do
-        spr(68,game.level.pitcoords[2][1]-32+x*8,game.level.pitcoords[2][2]) 
+        spr(68,game.level.pitcoords[2][1]-24+x*8,game.level.pitcoords[2][2]) 
     end
     pal()
     

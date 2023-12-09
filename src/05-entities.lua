@@ -80,7 +80,7 @@ function entity:update_faller()
     if self.type==entity_types.bomb and self.state==entity_states.idle
     then
         -- for bombs, check random number
-        local rand=rnd(100)
+        local rand=rnd(300)
         if rand>1 then canfall=0 end
     end
     if canfall==1 and player:is_dying()==0
@@ -164,6 +164,7 @@ function entity:update_pickup(score)
     then
         self.state = entity_states.invisible
         player:add_score(score)
+        if self.type==entity_types.diamond then player.diamonds+=1 else player.gems+=1 end
         sfx(0)
     end
 end

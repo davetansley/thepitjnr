@@ -109,8 +109,8 @@ function utilities:check_can_move(dir, coords)
 
     -- if contains block or sky, can't move
     local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
-    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64 or 
-        mget(cellcoords[1], cellcoords[2])==65 or mget(cellcoords[3],cellcoords[4])==65
+    if mget(cellcoords[1]+screen.mapx, cellcoords[2])==64 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==64 or 
+        mget(cellcoords[1]+screen.mapx, cellcoords[2])==65 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==65
     then
         return 0
     end

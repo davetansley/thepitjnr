@@ -1,8 +1,9 @@
 ship_states = {
     landing = 0,
     landed = 1,
-    escaping = 2,
-    lingering=3
+    fleeing = 2,
+    lingering=3,
+    escaping=4
 }
 
 ship = {
@@ -31,6 +32,26 @@ function ship:update()
     end
 
     if self.state==ship_states.escaping
+    then
+        if game.frame%4==0
+        then
+            if self.x < 12
+            then
+                self.x+=1
+            else
+                if self.y < -32
+                then
+                    game:next_level()
+                else
+                    self.y-=1
+                end
+            end
+            if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+        end
+        return
+    end
+
+    if self.state==ship_states.fleeing
     then
         if game.frame%4==0
         then

@@ -4,7 +4,9 @@ player_states = {
     shooting = 2,
     squashed = 3,
     bombed = 4,
-    mauled = 5
+    mauled = 5,
+    falling = 6,
+    escaping = 7
 }
 
 player={
@@ -29,6 +31,8 @@ function player:update()
 end
 
 function player:draw()
+    if (player.state==player_states.escaping) return
+
     -- draw player
     spr(self.sprite,self.x,self.y)
 
@@ -54,16 +58,34 @@ function player:reset()
     self.inpit=0 -- key for whether player is in the pit
     self.animframes=10 -- key for the number of frames an animation frame has
     self.firecooldown=0
+    self.diamonds=0
+    self.gems=0
 end
 
 -- return 1 if the player is dying
 function player:is_dying()
-    if self.state==player_states.crushed or self.state==player_states.bombed or self.state==player_states.mauled then return 1 end 
+    if self.state==player_states.crushed or self.state==player_states.bombed or self.state==player_states.mauled or self.state==player_states.falling then return 1 end 
     return 0
 end
 
 -- update the player state
 function player:update_player()
+    if (self.state==player_states.escaping) return
+
+    if self.state==player_states.falling
+    then
+        if (game.frame%1 != 0) return
+        -- Player is falling
+        if self.sprite == 4 then self.sprite=5 else self.sprite=4 end
+        if (self.y <= game.level.pitcoords[2][2]-1) self.y+=1
+        self.stateframes-=1
+        if (self.stateframes==60) sfx(4)
+        if self.stateframes==0
+            then
+                self:lose_life()
+            end
+        return
+    end
 
     if self.state==player_states.mauled
     then
@@ -108,6 +130,15 @@ function player:update_player()
     self.firecooldown-=1
     if (self.firecooldown<0) self.firecooldown=0
 
+    -- check if we've completed the level
+    if self:check_win()==1
+    then
+        return
+    end
+
+    -- check if we're falling in the pit
+    if (self:check_pit()==1) return;
+
     if self.state==player_states.digging 
     then
         -- Player is digging, so set that and return
@@ -138,7 +169,13 @@ function player:update_player()
         elseif btn(2) and moved==0 then 
             moved=self:move(0,-1,4,5,directions.up,0) 
         elseif btn(3) and moved==0 then 
-            moved=self:move(0,1,4,5,directions.down,0) 
+            if self.inpit==0
+            then
+                moved=self:move(0,1,4,5,directions.down,0)
+            else
+                self.sprite=0
+                self.dir=directions.right 
+            end
         elseif btn(5) then self:fire()
         end
         
@@ -149,12 +186,37 @@ function player:update_player()
     self:check_location()
 end
 
+function player:check_win()
+    if self.diamonds > 0 and self.x==16 and self.y==16 
+    then
+        self.state=player_states.escaping
+        game.ship.state=ship_states.escaping
+        return 1
+    end
+
+    return 0
+end
+
+function player:check_pit()
+    if (self.inpit==0) return 0
+    
+    -- check if the player is falling
+    if self.x >= game.level.pitcoords[1][1]+game.bridge
+    then
+        self.state=player_states.falling
+        self.stateframes=100
+        return 1
+    end
+end
+
 function player:fire()
     if self.dir==directions.up or self.dir==directions.down or self.firecooldown > 0 then return end 
 
     -- add bullet to the list
     local b = bullet:new()
-    b:set_coords(self.x,self.y,self.dir)
+    local xmod=-8
+    if (self.dir==directions.right) xmod=8
+    b:set_coords(self.x+xmod,self.y,self.dir)
     add(bullets,b)
     self.firecooldown=15
     sfx(3)
@@ -190,7 +252,7 @@ end
 
 function player:check_location()
     -- check pit
-    if game.level.pitcoords[1][1]<=self.x and self.x<game.level.pitcoords[2][1]+8 and game.level.pitcoords[1][2]<=self.y and  self.y<game.level.pitcoords[2][2]+8
+    if game.level.pitcoords[1][1]<=self.x and self.x<=game.level.pitcoords[2][1] and game.level.pitcoords[1][2]<=self.y and  self.y<game.level.pitcoords[2][2]+8
     then
         self.inpit=1
     else
@@ -229,8 +291,8 @@ function player:check_can_move(dir)
 
     -- if contains block or sky, can't move
     local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
-    if mget(cellcoords[1], cellcoords[2])==64 or mget(cellcoords[3],cellcoords[4])==64 or 
-        mget(cellcoords[1], cellcoords[2])==65 or mget(cellcoords[3],cellcoords[4])==65
+    if mget(cellcoords[1]+screen.mapx, cellcoords[2])==64 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==64 or 
+        mget(cellcoords[1]+screen.mapx, cellcoords[2])==65 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==65
     then
         return 0
     end

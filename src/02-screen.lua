@@ -1,8 +1,10 @@
 screen = {
-    tiles = {}
+    tiles = {},
+    mapx = 0
 }
 
 function screen:init()
+    self.mapx=16*(game.currentlevel-1)
     screen:populate_map()
     camera(0,view.y)  
 end
@@ -14,10 +16,18 @@ end
 function screen:draw()
     cls()
     -- draw map and set camera
-    map(0,0,0,0,16,24)
+    map(self.mapx,0,0,0,16,24)
     camera(0,view.y)    
     -- draw dirt
     screen:draw_dirt()
+    screen:draw_bridge()
+end
+
+function screen:draw_bridge()
+    for x=0, game.bridge-1 do
+        pset(game.level.pitcoords[1][1]+x,game.level.pitcoords[1][2]+8,8)
+        pset(game.level.pitcoords[1][1]+x,game.level.pitcoords[1][2]+9,8)
+    end
 end
 
 function screen:draw_zonk()
@@ -39,7 +49,7 @@ function screen:populate_map()
     for y = 0,23 do
         self.tiles[y]={}
         for x = 0,15 do
-            local sprite = mget(x,y)
+            local sprite = mget(x+self.mapx,y)
 
             local tile = {}
             tile.sprite=sprite
@@ -49,25 +59,25 @@ function screen:populate_map()
 
             if sprite==71 -- rock
             then
-                mset(x,y,255)
+                mset(x+self.mapx,y,255)
                 local r = rock:new()
                 r:set_coords(x,y)
                 add(rocks,r)
             elseif sprite==73 -- bomb
             then
-                mset(x,y,255)
+                mset(x+self.mapx,y,255)
                 local b = bomb:new()
                 b:set_coords(x,y)
                 add(bombs,b)
             elseif sprite==75 -- diamond
             then
-                mset(x,y,255)
+                mset(x+self.mapx,y,255)
                 local d = diamond:new()
                 d:set_coords(x,y)
                 add(diamonds,d)
             elseif sprite==86 -- gem
             then
-                mset(x,y,255)
+                mset(x+self.mapx,y,255)
                 local g = gem:new()
                 g:set_coords(x,y)
                 add(gems,g)
@@ -110,6 +120,6 @@ end
 
 function screen:check_camera()
     -- check for need to reset camera
-    if player.y>=96 and view.y==0 then view.y=64 end
+    if player.y>=96 and view.y==0 and player.state!=player_states.falling then view.y=64 end
     if player.y<=88 and view.y==64 then view.y=0 end
 end
