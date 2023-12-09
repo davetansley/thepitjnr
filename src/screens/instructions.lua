@@ -44,6 +44,6 @@ function instructions:draw()
     utilities.print_text("or all four small jewels", 17, 7)
     utilities.print_text("triple bonus "..scores.triplebonus.." points", 19, 8)
     utilities.print_text("collect all seven large jewels", 20, 7)
-    
+     
 end
 

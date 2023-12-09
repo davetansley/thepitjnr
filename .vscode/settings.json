@@ -4,7 +4,7 @@
             {
                 "match": "src/.*.lua",
                 "isAsync": true,
-                "cmd": "cat ${workspaceRoot}/src/*.lua > ${workspaceRoot}/main.lua"
+                "cmd": "cat ${workspaceRoot}/src/*.lua ${workspaceRoot}/src/*/*.lua > ${workspaceRoot}/main.lua"
             }			
         ]
     }

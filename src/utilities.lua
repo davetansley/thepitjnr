@@ -1,6 +1,4 @@
-utilities = {
-    lowest_pfr = -1
-}
+utilities = {}
 
 function utilities.pad_number(input)
     output=tostr(input)
@@ -9,22 +7,6 @@ function utilities.pad_number(input)
         output="0"..output
     end
     return output
-end
-
-
-function utilities.copy_array(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[utilities.copy_array(orig_key)] = utilities.copy_array(orig_value)
-        end
-        setmetatable(copy, utilities.copy_array(getmetatable(orig)))
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
 end
 
 -- Convert box coords in pixels to cells
@@ -90,13 +72,16 @@ end
 -- check a range of pixels that the entity is about to move into
 -- if can't move return 0
 -- if can move return 1
-function utilities:check_can_move(dir, coords)
+function utilities:check_can_move(dir, coords, bullet)
+
+    bullet=bullet or false
     local result = 1
     
     -- if rock, can't move
     for r in all(rocks) do
         local coords2 = {r.x,r.x+8,r.y,r.y+8}
         local overlap = utilities:check_overlap(coords,coords2)
+        
         if (overlap==1) return 0
     end
 
@@ -104,6 +89,7 @@ function utilities:check_can_move(dir, coords)
     for b in all(bombs) do
         local coords2 = {b.x,b.x+8,b.y,b.y+8}
         local overlap = utilities:check_overlap(coords,coords2)
+        
         if (overlap==1) return 0
     end
 
@@ -116,20 +102,10 @@ function utilities:check_can_move(dir, coords)
     end
 
     -- if contains dirt, can't move
-    local dirtfound=game:check_for_dirt(coords[1],coords[3],coords[2],coords[4])
+    local dirtfound=game:check_for_dirt(coords[1],coords[3],coords[2],coords[4],bullet)
     if (dirtfound==1) return 0
-
     -- otherwise, can move
     return 1
-end
-
-
-function utilities:print_debug()
-    if self.lowest_pfr == -1 or stat(9) < utilities.lowest_pfr
-    then
-        self.lowest_pfr = stat(9)
-    end
-    printh(" FR: "..stat(7).." TFR: "..stat(8).." PFR: "..stat(9).." LowPFR: "..utilities.lowest_pfr.." CPU: "..stat(1))
 end
 
 function utilities.print_text(text, line, colour)

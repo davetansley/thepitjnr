@@ -10,8 +10,7 @@ titlescreen = {
             .."2,11,9,11,13,11,"
             .."2,12,9,12,13,12",
     showfor=300,
-    timer=0
-
+    timer=0 
 }
 
 function titlescreen:init()

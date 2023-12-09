@@ -16,7 +16,9 @@ end
 function bullet:update()
 
     local coords = utilities:get_adjacent_spaces(self.dir,0,self.x,self.y)
-    local canmove = utilities:check_can_move(dir,coords)
+    -- limit coords
+    coords={coords[1],coords[2],coords[3]+3,coords[4]-4}
+    local canmove = utilities:check_can_move(dir,coords, true)
     
     if canmove == 0
     then
@@ -51,7 +53,5 @@ function bullet:draw()
 end
 
 function bullet:set_coords(x,y,dir)
-    self.x = x
-    self.y = y
-    self.dir = dir
+    self.x,self.y,self.dir = x,y,dir
 end

@@ -25,8 +25,8 @@ end
 
 function screen:draw_bridge()
     for x=0, game.bridge-1 do
-        pset(game.level.pitcoords[1][1]+x,game.level.pitcoords[1][2]+8,8)
-        pset(game.level.pitcoords[1][1]+x,game.level.pitcoords[1][2]+9,8)
+        pset(levels.pitcoords[1][1]+x,levels.pitcoords[1][2]+8,8)
+        pset(levels.pitcoords[1][1]+x,levels.pitcoords[1][2]+9,8)
     end
 end
 
@@ -38,8 +38,19 @@ end
 function screen:draw_scores()
     rectfill(1,1+view.y,47,7+view.y,1)
     rectfill(85,1+view.y,126,7+view.y,1)
+    local highscore = highscores[1].score
+    if (player.score > highscore) highscore = player.score
     print("score "..utilities.pad_number(player.score),2,2+view.y,7)
-    print("high "..utilities.pad_number(game.highscore), 86,2+view.y,7)
+    print("high "..utilities.pad_number(highscore), 86,2+view.y,7)
+end
+
+function screen:draw_highscores()
+    print("best scores today",30,110+view.y,12)
+
+    for x=1,#highscores do 
+        print(highscores[x].name.." "..utilities.pad_number(highscores[x].score),4+40*(x-1),118+view.y,8+(x-1))
+    end
+
 end
 
 -- Walk the map and replace any entity sprites
@@ -119,6 +130,8 @@ function screen:draw_dirt()
 end
 
 function screen:check_camera()
+    if game.state==game_states.waiting then view.y = 0 return end
+
     -- check for need to reset camera
     if player.y>=96 and view.y==0 and player.state!=player_states.falling then view.y=64 end
     if player.y<=88 and view.y==64 then view.y=0 end

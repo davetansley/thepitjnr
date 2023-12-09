@@ -45,13 +45,13 @@ function levelendscreen:update()
         self.timer+=1
     else
         -- allocate score
-        if self.frame%30==0 
+        if self.frame%20==0 
         then
             local toadd=0
             if self.score<100 then toadd=self.score else toadd=100 end
             player.score+=toadd
             self.score-=toadd
-            sfx(5)
+            sfx(5) 
         end
     end
 
@@ -62,7 +62,7 @@ function levelendscreen:draw()
     cls(11)
 
     screen:draw_scores()
-    local linebase = 3
+    local linebase = 5
     utilities.print_text("congratulations", linebase, 1)
     utilities.print_text("player 1", linebase+2, 1)
     utilities.print_text("you have earned", linebase+5, 2)

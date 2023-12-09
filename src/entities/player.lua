@@ -22,7 +22,8 @@ directions = {
 }
 
 function player:init()
-    self.lives = 3
+    self.lives = 2
+    self.score = 0
     self:reset()
 end
 
@@ -45,21 +46,9 @@ function player:draw()
 end
 
 function player:reset()
-    self.x=16 --key for the x variable
-    self.y=16 --key for the y variable
-    self.dir=directions.right --key for the direction: 0 right, 1 left, 2 up, 3 down
-    self.sprite=0 -- key for the sprite
-    self.oldsprite=0 -- key for storing the old sprite
-    self.framecount=0 -- key for frame counting
-    self.framestomove=0 -- key for frames left in current move
-    self.state=0 -- key for player activity. 0 moving, 1 digging, 2 shooting, 3 squashing
-    self.stateframes=0 -- key for frames in current activity
-    self.incavern=0 -- key for whether player is in the diamond cavern
-    self.inpit=0 -- key for whether player is in the pit
-    self.animframes=10 -- key for the number of frames an animation frame has
-    self.firecooldown=0
-    self.diamonds=0
-    self.gems=0
+    self.x, self.y, self.dir, self.sprite, self.oldsprite, self.framecount, self.framestomove, self.state,
+        self.stateframes, self.incavern, self.inpit, self.animframes, self.firecooldown, self.diamonds, self.gems
+        =16,16,directions.right,0,0,0,0,0,0,0,0,10,0,0,0 
 end
 
 -- return 1 if the player is dying
@@ -77,7 +66,7 @@ function player:update_player()
         if (game.frame%1 != 0) return
         -- Player is falling
         if self.sprite == 4 then self.sprite=5 else self.sprite=4 end
-        if (self.y <= game.level.pitcoords[2][2]-1) self.y+=1
+        if (self.y <= levels.pitcoords[2][2]-1) self.y+=1
         self.stateframes-=1
         if (self.stateframes==60) sfx(4)
         if self.stateframes==0
@@ -201,7 +190,7 @@ function player:check_pit()
     if (self.inpit==0) return 0
     
     -- check if the player is falling
-    if self.x >= game.level.pitcoords[1][1]+game.bridge
+    if self.x >= levels.pitcoords[1][1]+game.bridge
     then
         self.state=player_states.falling
         self.stateframes=100
@@ -252,7 +241,7 @@ end
 
 function player:check_location()
     -- check pit
-    if game.level.pitcoords[1][1]<=self.x and self.x<=game.level.pitcoords[2][1] and game.level.pitcoords[1][2]<=self.y and  self.y<game.level.pitcoords[2][2]+8
+    if levels.pitcoords[1][1]<=self.x and self.x<=levels.pitcoords[2][1] and levels.pitcoords[1][2]<=self.y and  self.y<levels.pitcoords[2][2]+8
     then
         self.inpit=1
     else
@@ -260,7 +249,7 @@ function player:check_location()
     end
 
     -- check cavern
-    if game.level.caverncoords[1][1]<=self.x and self.x<game.level.caverncoords[2][1]+8 and game.level.caverncoords[1][2]<=self.y and  self.y<game.level.caverncoords[2][2]+8
+    if levels.caverncoords[1][1]<=self.x and self.x<levels.caverncoords[2][1]+8 and levels.caverncoords[1][2]<=self.y and  self.y<levels.caverncoords[2][2]+8
     then
         self.incavern=1
     else
@@ -375,7 +364,6 @@ end
 
 function player:add_score(score)
     self.score+=score
-    if self.score > game.highscore then game.highscore = self.score end
 end
 
 -- flash the adjacent square when digging

@@ -11,6 +11,11 @@ function livesscreen:init()
     draw=function ()
         livesscreen:draw()
     end
+
+    if game.state==game_states.waiting
+    then
+        player:init()
+    end
 end
 
 function livesscreen:update()
@@ -37,7 +42,7 @@ function livesscreen:draw()
     then
         utilities.print_text("last man", 5, 10)
     else
-        utilities.print_text(""..player.lives.." men left", 5, 10)
+        utilities.print_text(""..(player.lives+1).." men left", 5, 10)
     end
     
 end

@@ -8,6 +8,21 @@ scores={
     robot=10, -- 100
 }
 
+highscores={
+    {
+        score=0,
+        name="gam"
+    },
+    {
+        score=0,
+        name="gam"
+    },
+    {
+        score=0,
+        name="gam"
+    }
+}
+
 -- game speeds in number of frames before next update
 game_speeds = {
     bridge=8
@@ -21,7 +36,6 @@ game_states = {
 game = {
     level={},
     currentlevel=1,
-    highscore=100,
     state=game_states.waiting,
     ship={},
     tank={},
@@ -40,6 +54,7 @@ function game:init()
 
     -- config variables
     self.currentlevel=1
+    self.highscore=highscores[1].score
     player:init()
     
     -- viewport variables
@@ -188,11 +203,7 @@ function game:reset()
     reload(0x1000, 0x1000, 0x2000)
 
     -- Populate entities
-    rocks={}
-    bombs={}
-    diamonds={}
-    gems={}
-    bullets={}
+    rocks,bombs,diamonds,gems,bullets={},{},{},{},{}
 
     game.currentmountain=1
     game.currentmountaincount=0
@@ -203,9 +214,9 @@ end
 
 function game:next_level()
     self.currentlevel+=1
+    levelendscreen:init()
     player:reset()
     self:reset()
-    levelendscreen:init()
 end
 
 function game:update_timer()
@@ -264,14 +275,20 @@ function game:show_gameover()
     self.state=game_states.waiting
     view.y=0
     camera(0,0)
-    player:init()
-    titlescreen:init()
-end
+    if player.score > 0 and player.score >= highscores[3].score
+    then
+        highscorescreen:init()
+    else
+        gameoverscreen:init()
+    end
+end 
 
 -- check for a dirt tile in the range specified
 -- return 1 if dirt is found
-function game:check_for_dirt(x1,y1,x2,y2)
+function game:check_for_dirt(x1,y1,x2,y2,bullet)
 
+    bullet=bullet or false
+    
     -- convert pixel coords to cells
     local coords = utilities.box_coords_to_cells(x1,y1,x2,y2)
     
@@ -280,6 +297,13 @@ function game:check_for_dirt(x1,y1,x2,y2)
 
     local offset1 = y1 % 8
     local offset2 = (y2+1) % 8
+
+    if bullet==true
+    then
+        -- special case for bullets
+        if tile1.sprite==70 and sub(tile1.dirt,offset1+1,offset1+1)=="1" then return 1 end
+        return 0
+    end
 
     -- if this is dirt and it still has dirt
     if tile1.sprite==70 and self:has_dirt(tile1,offset1,1)==1 then return 1 end

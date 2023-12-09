@@ -33,15 +33,15 @@ function monster:update()
         if game.frame%4==0
         then
             self.x+=self.xmod
-            if self.x<=game.level.pitcoords[1][1] or self.x>=game.level.pitcoords[2][1]-8
+            if self.x<=levels.pitcoords[1][1] or self.x>=levels.pitcoords[2][1]-8
             then
                 self.xmod=-1*self.xmod
             end
         end
         -- slow down rise above certain point
-        if self.y<=game.level.pitcoords[1][2]+15 then self.y += self.ymod else self.y+=self.ymod*3 end
+        if self.y<=levels.pitcoords[1][2]+15 then self.y += self.ymod else self.y+=self.ymod*3 end
 
-        if self.y<=game.level.pitcoords[1][2]+10 or self.y>=game.level.pitcoords[2][2]-4
+        if self.y<=levels.pitcoords[1][2]+10 or self.y>=levels.pitcoords[2][2]-4
         then
             self.ymod=-1*self.ymod
         end
@@ -59,7 +59,7 @@ function monster:draw()
     local height=1
 
     -- generate new colors
-    if self.y >= game.level.pitcoords[2][2]-8 and self.delay == 0
+    if self.y >= levels.pitcoords[2][2]-8 and self.delay == 0
     then
         self:generate_pallete()
     end 
@@ -69,7 +69,7 @@ function monster:draw()
     pal(self.colors[2],self.newcolors[2])
     pal(self.colors[3],self.newcolors[3])
     
-    if self.y < game.level.pitcoords[2][2]-8
+    if self.y < levels.pitcoords[2][2]-8
     then
         height=2
     end
@@ -77,10 +77,10 @@ function monster:draw()
     spr(self.sprites[self.currentframe],self.x,self.y,2,height)
 
     -- draw the green gunge over the sprite
-    local cellcoords=utilities.point_coords_to_cells(game.level.pitcoords[2][1],game.level.pitcoords[2][2])
+    local cellcoords=utilities.point_coords_to_cells(levels.pitcoords[2][1],levels.pitcoords[2][2])
 
     for x=1,3 do
-        spr(68,game.level.pitcoords[2][1]-24+x*8,game.level.pitcoords[2][2]) 
+        spr(68,levels.pitcoords[2][1]-24+x*8,levels.pitcoords[2][2]) 
     end
     pal()
     
