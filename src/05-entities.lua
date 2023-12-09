@@ -25,7 +25,7 @@ entity = {
     sprite = 0,
     state = entity_states.idle,
     time = 0,
-    preparingtime=30,
+    preparingtime=60,
     anims = {
         idle={},
         preparing={},
@@ -104,10 +104,12 @@ function entity:update_faller()
         end
         
         -- update sprite
-        self.framecount+=1
-        self.animindex = (self.animindex % #self.anims[self.state]) + 1
-        self.sprite =  self.anims[self.state][self.animindex]
-
+        if (game.frame%3==0)
+        then
+            self.framecount+=1
+            self.animindex = (self.animindex % #self.anims[self.state]) + 1
+            self.sprite =  self.anims[self.state][self.animindex]
+        end
     else
         if self.state==entity_states.falling then sfx(2) end
         self.state=entity_states.idle
@@ -155,7 +157,10 @@ function entity:update_pickup(score)
         self.framecount+=1
     end 
 
-    if player:check_for_player(self.x,self.x+8,self.y,self.y+8)==1 and self.state == entity_states.idle
+    local ymod=0
+    if (self.type==entity_types.gem) ymod=4
+
+    if player:check_for_player(self.x,self.x+7,self.y+ymod,self.y+7)==1 and self.state == entity_states.idle
     then
         self.state = entity_states.invisible
         player:add_score(score)
@@ -168,7 +173,7 @@ end
 rock = entity:new(
     {
         type = entity_types.rock,
-        preparingtime = 40,
+        preparingtime = 80,
         sprite = 71, 
         anims = {
             idle={fr=1,71},
@@ -190,7 +195,7 @@ end
 bomb = entity:new(
     {
         type = entity_types.bomb,
-        preparingtime = 30,
+        preparingtime = 60,
         sprite = 73, 
         anims = {
             idle={fr=1,73},
@@ -211,7 +216,7 @@ diamond = entity:new(
         type = entity_types.diamond,
         sprite = 75, 
         anims = {
-            idle={fr=2,75,76,77},
+            idle={fr=4,75,76,77},
             invisible={fr=1,255}
         }
     }
@@ -226,7 +231,7 @@ gem = entity:new(
         type = entity_types.gem,
         sprite = 86, 
         anims = {
-            idle={fr=2,86,87,88},
+            idle={fr=4,86,87,88,89},
             invisible={fr=1,255}
         }
     }

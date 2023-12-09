@@ -4,7 +4,7 @@ function _init()
 end
 
 -- update
-function _update()
+function _update60()
     update()
     --utilities:print_debug()
 end

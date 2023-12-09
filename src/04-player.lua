@@ -53,6 +53,7 @@ function player:reset()
     self.incavern=0 -- key for whether player is in the diamond cavern
     self.inpit=0 -- key for whether player is in the pit
     self.animframes=10 -- key for the number of frames an animation frame has
+    self.firecooldown=0
 end
 
 -- return 1 if the player is dying
@@ -66,7 +67,7 @@ function player:update_player()
 
     if self.state==player_states.mauled
     then
-        if (game.frame%2 != 0) return
+        if (game.frame%4 != 0) return
         -- Player is being mauled
         if self.sprite == 2 then self.sprite=0 else self.sprite=2 end
         self.stateframes-=1
@@ -80,8 +81,11 @@ function player:update_player()
     if self.state==player_states.crushed
     then
         -- Player is being squashed
-        if self.sprite == 10 then self.sprite=11 else self.sprite=10 end
-        self.stateframes-=1
+        if game.frame%3==0
+        then
+            if self.sprite == 10 then self.sprite=11 else self.sprite=10 end
+            self.stateframes-=1
+        end
         if self.stateframes==0
             then
                 self:lose_life()
@@ -99,6 +103,10 @@ function player:update_player()
             end
         return
     end
+
+    -- reduce the shot cooldown
+    self.firecooldown-=1
+    if (self.firecooldown<0) self.firecooldown=0
 
     if self.state==player_states.digging 
     then
@@ -131,6 +139,7 @@ function player:update_player()
             moved=self:move(0,-1,4,5,directions.up,0) 
         elseif btn(3) and moved==0 then 
             moved=self:move(0,1,4,5,directions.down,0) 
+        elseif btn(5) then self:fire()
         end
         
         if moved==1 and horiz==1 then self.framestomove=7 end
@@ -138,6 +147,17 @@ function player:update_player()
 
     -- update the player's location
     self:check_location()
+end
+
+function player:fire()
+    if self.dir==directions.up or self.dir==directions.down or self.firecooldown > 0 then return end 
+
+    -- add bullet to the list
+    local b = bullet:new()
+    b:set_coords(self.x,self.y,self.dir)
+    add(bullets,b)
+    self.firecooldown=15
+    sfx(3)
 end
 
 function player:lose_life()
@@ -236,7 +256,7 @@ function player:try_to_dig(dir)
             self.oldsprite=self.sprite
         end
         self.state=player_states.digging
-        self.stateframes=7
+        self.stateframes=14
         self.sprite=6+dir
     end
 end

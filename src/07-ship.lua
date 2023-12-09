@@ -26,32 +26,39 @@ function ship:update()
 
     if self.state==ship_states.lingering
     then
-        if (game.frame%40==0) self.state=ship_states.landed -- hang around for a second
+        if (game.frame%80==0) self.state=ship_states.landed -- hang around for a second
         return
     end
 
-    if self.state==ship_states.escaping 
+    if self.state==ship_states.escaping
     then
-        self.y-=1
-        if self.y < -64 -- hang around for a while, to rub it in
+        if game.frame%4==0
         then
-            player:lose_life()
+            self.y-=1
+            if self.y < -64 -- hang around for a while, to rub it in
+            then
+                player:lose_life()
+            end
         end
         return
     end
 
     if self.state==ship_states.landed 
     then
-        if (self.x > 0 and game.frame%2==0) self.x-=1 
+        if (self.x > 0) 
+        then
+            if (game.frame%4==0) self.x-=1 
+            if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+        end
         return
     end
 
-    if game.frame%3==0
+    if game.frame%6==0
     then
         self.y += 1
     end
     if self.y == 8 then self.state = ship_states.lingering end    
-    if game.frame%2==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+    if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
 end
 
 function ship:draw()

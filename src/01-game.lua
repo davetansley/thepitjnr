@@ -1,10 +1,11 @@
 
 scores={
-    diamond=10,
-    gem=5,
-    singlebonus=500,
-    doublebonus=1000,
-    triplebonus=1500
+    diamond=100, -- 2000
+    gem=50, -- 1000
+    singlebonus=500, -- 5000
+    doublebonus=1000, -- 10000
+    triplebonus=1500, -- 15000
+    robot=10, -- 100
 }
 
 game_states = {
@@ -91,6 +92,10 @@ function game:update()
         add(self.robots,r)
     end
 
+    for r in all(bullets) do
+        r:update()
+    end
+
     for r in all(self.robots) do
         r:update()
     end
@@ -132,6 +137,10 @@ function game:draw()
         r:draw()
     end
 
+    for r in all(bullets) do
+        r:draw()
+    end
+
     self.ship:draw()
 
     self.tank:draw()
@@ -165,6 +174,7 @@ function game:reset()
     bombs={}
     diamonds={}
     gems={}
+    bullets={}
 
     game.currentmountain=1
     game.currentmountaincount=0
@@ -227,6 +237,8 @@ end
 
 function game:show_gameover()
     self.state=game_states.waiting
+    view.y=0
+    camera(0,0)
     player:init()
     titlescreen:init()
 end

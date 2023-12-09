@@ -10,6 +10,7 @@ robot = {
     possiblecolors={7,8,9,10,11,12,13,14},
     autoframes=0,
     killed=false, -- has the robot killed the player
+    dying=false,
     alldirs=false,
     reversedirections = {
         directions.left,
@@ -29,9 +30,19 @@ end
 
 function robot:update()
 
+    if self.dying == true 
+    then
+        -- robot has been shot - update palette, reduce frames, remove
+        self.colors = self.newcolors
+        self:generate_pallete()
+        self.autoframes-=1
+        if (self.autoframes<0) del(game.robots,self)
+        return
+    end
+
     if self.killed == true 
     then
-        if (game.frame%2 != 0) return
+        if (game.frame%4 != 0) return
         if player.sprite != 0 then self.flipx = true else self.flipx = false end -- this is the killer robot
         return
     end
@@ -84,11 +95,12 @@ function robot:update()
     if self.dir == directions.right
     then
         self.flipx = false 
-    else
+    elseif self.dir == directions.left
+    then
         self.flipx = true 
     end
 
-    if game.frame%15 == 0
+    if game.frame%15 == 0 and self.dir != directions.up and self.dir != directions.down
     then
         self.currentframe+=1
         if (self.currentframe > 4) self.currentframe = 1
@@ -106,6 +118,11 @@ function robot:draw()
     spr(self.sprites[self.currentframe], self.x, self.y, 1, 1, self.flipx )
     
     pal()
+end
+
+function robot:die()
+    self.dying=true
+    self.autoframes=30
 end
 
 function robot:check_kill()

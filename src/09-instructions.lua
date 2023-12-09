@@ -1,5 +1,5 @@
 instructions = {
-    showfor=150,
+    showfor=300,
     timer=0
 }
 

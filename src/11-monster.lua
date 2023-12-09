@@ -27,10 +27,10 @@ function monster:update()
         return
     end
 
-    if game.frame%1==0
+    if game.frame%2==0
     then
         -- work out new coords here
-        if game.frame%2==0
+        if game.frame%4==0
         then
             self.x+=self.xmod
             if self.x<=game.level.pitcoords[1][1] or self.x>=game.level.pitcoords[2][1]-16

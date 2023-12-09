@@ -11,9 +11,9 @@ tank = {
     fire_sprite = 104,
     bullet_sprite = 105,
     state = tank_states.moving,
-    framesperupdate=2,
+    framesperupdate=4,
     frames=0,
-    delay=60,
+    delay=120,
     anims={
         {100,101},{102,103}
     }
@@ -43,7 +43,7 @@ function tank:update()
         end
         if self.x == 96 then self.state = tank_states.shooting end    
     end
-    if self.frames%2==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+    if self.frames%4==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
 end
 
 function tank:draw()
