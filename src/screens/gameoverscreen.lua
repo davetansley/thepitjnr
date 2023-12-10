@@ -20,6 +20,7 @@ function gameoverscreen:update()
         titlescreen:init()   
     end 
     self.timer+=1
+    
 end
 
 function gameoverscreen:draw()

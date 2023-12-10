@@ -1,5 +1,11 @@
+cart_id="thepitjnrv1"
+
 -- init
 function _init()
+    cartdata(cart_id)
+
+    highscorescreen:load_scores()
+
     titlescreen:init()
 end
 

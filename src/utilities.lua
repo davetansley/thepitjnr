@@ -69,7 +69,7 @@ function utilities:check_overlap(coords1,coords2)
     return 0
 end
 
--- check a range of pixels that the entity is about to move into
+-- check a range of pixels that the object is about to move into
 -- if can't move return 0
 -- if can move return 1
 function utilities:check_can_move(dir, coords, bullet)
@@ -108,8 +108,36 @@ function utilities:check_can_move(dir, coords, bullet)
     return 1
 end
 
-function utilities.print_text(text, line, colour)
-    local ydelta=6
-    local x = 64 - 4*(#text/2)
-    print(text, x, ydelta*line,colour)
+function utilities.print_text(text, line, colour, bgcolor)
+    local ydelta,x,w=6,64 - 4*(#text/2),4*#text
+    local y=ydelta*line
+    if bgcolor
+    then
+        rectfill(x-4,y-2,x+w+2,y+6,bgcolor)
+    end
+    print(text,x,y,colour)
 end
+
+function utilities.print_texts(text)
+    local items=split(text)
+    for x=1,#items,3 do 
+        utilities.print_text(items[x],tonum(items[x+1]),tonum(items[x+2]))
+    end
+end
+
+-- generates a palette of three random colours from a selection passed as a parameter
+function utilities.generate_pallete(possiblecolors)
+    local i1,i2,i3,found = 0,0,0,0
+
+    while found == 0 do 
+        i1,i2,i3 = flr(rnd(#possiblecolors))+1,flr(rnd(#possiblecolors))+1,flr(rnd(#possiblecolors))+1
+        if (i1 != i2 and i1 != i3) found = 1
+    end
+    return {possiblecolors[i1],possiblecolors[i2],possiblecolors[i3]}
+end
+
+function utilities:sfx(sound)
+    if (game.demo==0) sfx(sound)
+end
+    
+

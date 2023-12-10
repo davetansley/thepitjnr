@@ -23,11 +23,6 @@ highscores={
     }
 }
 
--- game speeds in number of frames before next update
-game_speeds = {
-    bridge=8
-}
-
 game_states = {
     waiting = 0,
     running = 1
@@ -41,20 +36,30 @@ game = {
     tank={},
     monster={},
     robots={},
+    objects={},
     frame=0,
     mountain={10,9,8,7,6,5,4},
     currentmountain=1,
     currentmountaincount=0,
-    tickframes=150, -- how many frames before we process the timer?
+    settings={},
+    demo=0,
     bridge=24 -- how much is the bridge extended
 }
+function game:init_demo()
+    self.demo=1
+    self:start()
+end
 
 function game:init()
+    self.demo=0
+    self:start()
+end
+
+function game:start()
     self.switchto()
 
     -- config variables
-    self.currentlevel=1
-    self.highscore=highscores[1].score
+    self.currentlevel,self.highscore=1,highscores[1].score
     player:init()
     
     -- viewport variables
@@ -90,37 +95,19 @@ function game:update()
         return;
     end
 
-    for r in all(rocks) do
-        r:update()
-    end
-
-    for r in all(bombs) do
-        r:update()
-    end
-
-    for r in all(diamonds) do
-        r:update()
-    end
-
-    for r in all(gems) do
-        r:update()
-    end
+    self:update_array(self.objects)
 
     -- if we need a robot, spawn it
-    if self.tank.state==tank_states.shooting and #self.robots < self.level.robots and self.frame%150 == 0
+    if self.tank.state==tank_states.shooting and #self.robots < self.settings[2] and self.frame%game.settings[6] == 0
     then
         local r = robot:new()
-        r:generate_pallete()
+        r.newcolors = utilities.generate_pallete(r.possiblecolors)
         add(self.robots,r)
     end
 
-    for r in all(bullets) do
-        r:update()
-    end
+    self:update_array(bullets)
 
-    for r in all(self.robots) do
-        r:update()
-    end
+    self:update_array(self.robots)
 
     if self.tank.state == tank_states.moving
     then
@@ -133,7 +120,7 @@ function game:update()
         player:update()
     end
 
-    if player.inpit==1 and game.frame%game_speeds.bridge==0
+    if player.inpit==1 and game.frame%game.settings[5]==0
     then
         -- reduce pit bridge by 1
         game.bridge-=1
@@ -147,29 +134,9 @@ end
 function game:draw()
     screen:draw()
 
-    for r in all(rocks) do
-        r:draw()
-    end
-
-    for r in all(bombs) do
-        r:draw()
-    end
-
-    for r in all(diamonds) do
-        r:draw()
-    end
-
-    for r in all(gems) do
-        r:draw()
-    end
-
-    for r in all(self.robots) do
-        r:draw()
-    end
-
-    for r in all(bullets) do
-        r:draw()
-    end
+    self:draw_array(self.objects)
+    self:draw_array(self.robots)
+    self:draw_array(bullets)
 
     self.ship:draw()
 
@@ -186,33 +153,45 @@ function game:draw()
     self.monster:draw()
 end
 
+function game:update_array(array)
+    for r in all(array) do
+        r:update()
+    end
+end
+
+function game:draw_array(array)
+    for r in all(array) do
+        r:draw()
+    end
+end
+
 function game:reset()
     
-    view.y=0
-
     self.level = levels[self.currentlevel]
+    self.settings = split(self.level.settings)
 
     -- Create a new ship and tank
-    self.ship = ship:new()
-    self.tank = tank:new()
-    self.monster = monster:new()
-    self.robots = {}
-    self.bridge = 24
-
+    self.ship, self.tank,self.monster,self.robots,self.bridge, self.objects,view.y = ship:new(),tank:new(), monster:new(),{},24,{},0
+   
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
 
     -- Populate entities
     rocks,bombs,diamonds,gems,bullets={},{},{},{},{}
 
-    game.currentmountain=1
-    game.currentmountaincount=0
+    game.currentmountain,game.currentmountaincount=1,0
 
     screen:init()
 
 end
 
 function game:next_level()
+    if (self.demo==1) 
+    then
+        titlescreen:init()
+        return
+    end
+
     self.currentlevel+=1
     levelendscreen:init()
     player:reset()
@@ -221,12 +200,11 @@ end
 
 function game:update_timer()
 
-    if (self.frame % game.tickframes != 0 or self.tank.state != tank_states.shooting) return
+    if (self.frame % game.settings[3] != 0 or self.tank.state != tank_states.shooting) return
 
     if self.currentmountain > #self.mountain
     then
-        view.y = 0
-        self.ship.state = ship_states.fleeing
+        view.y,self.ship.state = 0,ship_states.fleeing
         return
     end
 
@@ -274,7 +252,7 @@ end
 function game:show_gameover()
     self.state=game_states.waiting
     view.y=0
-    camera(0,0)
+    camera()
     if player.score > 0 and player.score >= highscores[3].score
     then
         highscorescreen:init()

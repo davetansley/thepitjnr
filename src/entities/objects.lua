@@ -4,26 +4,26 @@ diamonds={}
 gems={}
 bombs={}
 
-entity_states={
+object_states={
     idle="idle",
     preparing="preparing",
     falling="falling",
     invisible="invisible"
 }
 
-entity_types={
+object_types={
     rock=0,
     bomb=1,
     diamond=2,
     gem=3
 }
 
--- default attribute values for an "entity" class
-entity = {
+-- default attribute values for an "object" class
+object = {
     x = 0,
     y = 0,
     sprite = 0,
-    state = entity_states.idle,
+    state = object_states.idle,
     time = 0,
     preparingtime=60,
     anims = {
@@ -33,73 +33,73 @@ entity = {
     },
     framecount=0,
     animindex=1,
+    killed=false,
     reset = function(self)
         self.framecount=1
         self.animindex=1
     end    
 }
 
--- the entity class constructor
-function entity:new(o)
+-- the object class constructor
+function object:new(o) 
     o = o or {}
     setmetatable(o, self)
     self.__index = self
     return o
 end
 
-function entity:draw()
+function object:draw()
     spr(self.sprite,self.x,self.y)   
 end
 
-function entity:set_coords(xcell,ycell)
-    self.x=xcell*8
-    self.y=ycell*8   
+function object:set_coords(xcell,ycell)
+    self.x,self.y=xcell*8,ycell*8
 end
 
-function entity:check_kill()
+function object:check_kill()
     
-    if self.state!=entity_states.falling then return end
+    if self.state!=object_states.falling then return end
 
     local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
     if player:check_for_player(coords[1],coords[2],coords[3],coords[4])==1 
     then 
-        if self.type==entity_types.rock
+        if self.type==object_types.rock
         then
             player:kill_player(player_states.crushed)
-        elseif self.type==entity_types.bomb
+        elseif self.type==object_types.bomb
         then
             player:kill_player(player_states.bombed)
         end 
+        self.killed=true
     end
     
 end
 
-function entity:update_faller()
+function object:update_faller()
     -- check below for space to fall
     local canfall=self:check_can_fall() 
-    if self.type==entity_types.bomb and self.state==entity_states.idle
+    if self.type==object_types.bomb and self.state==object_states.idle
     then
         -- for bombs, check random number
-        local rand=rnd(300)
-        if rand>1 then canfall=0 end
+        local rand=rnd(100)
+        if rand>game.settings[4] then canfall=0 end
     end
     if canfall==1 and player:is_dying()==0
     then
-        if self.state==entity_states.falling
+        if self.state==object_states.falling
         then
             -- actually falling
             self.y+=1
-        elseif self.state==entity_states.preparing
+        elseif self.state==object_states.preparing
         then
             self.time+=1
             if self.time >= self.preparingtime 
             then
-                self.state=entity_states.falling
+                self.state=object_states.falling
             end
-        elseif self.state==entity_states.idle
+        elseif self.state==object_states.idle
         then 
-            self.state=entity_states.preparing
-            self.time=0 
+            self.state,self.time=object_states.preparing,0
             self:reset()
         end
         
@@ -107,12 +107,16 @@ function entity:update_faller()
         if (game.frame%3==0)
         then
             self.framecount+=1
-            self.animindex = (self.animindex % #self.anims[self.state]) + 1
-            self.sprite =  self.anims[self.state][self.animindex]
+            self.animindex,self.sprite = (self.animindex % #self.anims[self.state]) + 1,self.anims[self.state][self.animindex]
         end
     else
-        if self.state==entity_states.falling then sfx(2) end
-        self.state=entity_states.idle
+        if player:is_dying()==1
+        then
+            if player.stateframes==9 then utilities:sfx(2) end 
+        else
+            if self.state==object_states.falling then utilities:sfx(2) end
+        end
+        self.state=object_states.idle
     end
     
 end
@@ -120,8 +124,8 @@ end
 -- check a range of pixels that the rock is about to move into
 -- if can't fall return 0
 -- if can fall return 1
-function entity:check_can_fall() 
-    if self.y>=184 then return 0 end -- prevent out of bounds
+function object:check_can_fall() 
+    if (self.y>=184) return 0  -- prevent out of bounds
 
     local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
 
@@ -138,8 +142,7 @@ function entity:check_can_fall()
     end
 
     -- check dirt array
-    local cellcoords = utilities.point_coords_to_cells(coords[1], coords[3])
-    local offset=coords[3]%8
+    local cellcoords,offset = utilities.point_coords_to_cells(coords[1], coords[3]),coords[3]%8
     local tile = screen.tiles[cellcoords[2]][cellcoords[1]]
     if sub(tile.dirt,offset+1,offset+1)=="1" or tile.block==1 then return 0 end
     
@@ -147,33 +150,39 @@ function entity:check_can_fall()
 end
 
 -- check if a pickup is overlapping the player. If so, collect
-function entity:update_pickup(score)
+function object:update_pickup(score)
     if self.framecount>=self.anims[self.state].fr
     then
-        self.animindex = (self.animindex % #self.anims[self.state]) + 1
-        self.sprite =  self.anims[self.state][self.animindex]
-        self.framecount=1
+        self.animindex,self.sprite,self.framecount = (self.animindex % #self.anims[self.state]) + 1,self.anims[self.state][self.animindex],1
     else
         self.framecount+=1
     end 
 
     local ymod=0
-    if (self.type==entity_types.gem) ymod=4
+    if (self.type==object_types.gem) ymod=4
 
-    if player:check_for_player(self.x,self.x+7,self.y+ymod,self.y+7)==1 and self.state == entity_states.idle
+    if player:check_for_player(self.x,self.x+7,self.y+ymod,self.y+7)==1 and self.state == object_states.idle
     then
-        self.state = entity_states.invisible
+        self.state = object_states.invisible
         player:add_score(score)
-        if self.type==entity_types.diamond then player.diamonds+=1 else player.gems+=1 end
-        sfx(0)
+        if self.type==object_types.diamond then player.diamonds+=1 else player.gems+=1 end
+        utilities:sfx(0)
+    end
+
+    -- check for collision with rocks and bombs
+    for r in all(rocks) do
+        if (r.x == self.x and r.y >= self.y and r.y < self.y+7) self.state = object_states.invisible
+    end
+    for b in all(bombs) do
+        if (b.x == self.x and b.y >= self.y and b.y < self.y+7) self.state = object_states.invisible
     end
 end
 
 
--- subclasses of entity
-rock = entity:new(
+-- subclasses of object
+rock = object:new(
     {
-        type = entity_types.rock,
+        type = object_types.rock,
         preparingtime = 80,
         sprite = 71, 
         anims = {
@@ -190,12 +199,13 @@ function rock:update()
 end
 
 function rock:draw()
+    if (self.killed==true and player.stateframes<10) return
     spr(self.sprite,self.x,self.y)   
 end
 
-bomb = entity:new(
+bomb = object:new(
     {
-        type = entity_types.bomb,
+        type = object_types.bomb,
         preparingtime = 60,
         sprite = 73, 
         anims = {
@@ -212,9 +222,9 @@ function bomb:update()
     self:check_kill()
 end
 
-diamond = entity:new(
+diamond = object:new(
     {
-        type = entity_types.diamond,
+        type = object_types.diamond,
         sprite = 75, 
         anims = {
             idle={fr=4,75,76,77},
@@ -227,9 +237,9 @@ function diamond:update()
     self:update_pickup(scores.diamond)
 end
 
-gem = entity:new(
+gem = object:new(
     {
-        type = entity_types.gem,
+        type = object_types.gem,
         sprite = 86, 
         anims = {
             idle={fr=4,86,87,88,89},

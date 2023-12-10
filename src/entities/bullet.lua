@@ -3,15 +3,11 @@ bullets = {}
 bullet = {
     x = 0,
     y = 0,
-    dir = 0
+    dir = 0,
+    sprite = 14
 }
 
-function bullet:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+bullet=entity:new(bullet)
 
 function bullet:update()
 
@@ -40,16 +36,8 @@ function bullet:update()
         end
     end
 
-    if self.dir == directions.right
-    then
-        self.x+=8
-    else
-        self.x-=8
-    end
-end
-
-function bullet:draw()
-    spr(14,self.x,self.y)
+    local xmod = self.dir == directions.right and 8 or -8
+    self.x+=xmod
 end
 
 function bullet:set_coords(x,y,dir)

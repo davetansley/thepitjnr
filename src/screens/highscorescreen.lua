@@ -4,6 +4,7 @@ highscorescreen = {
     initials={"a","a","a"},
     currentinitial=1,
     allchars="a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,1,2,3,4,5,6,7,8,9,0, ,!,?",
+    allcharsarray={},
     currentchar=1,
     cooldown=0
 }
@@ -16,21 +17,19 @@ function highscorescreen:init()
     draw=function ()
         highscorescreen:draw()
     end
-
-    self.initials = {"a","a","a"}
-    self.currentinitial = 1
-    self.currentchar = 1
-
+    
     -- determine position
+    local scorepos,scoretext=3,"3rd best"
     if player.score>highscores[1].score
     then
-        self.scorepos, self.scoretext = 1,"greatest"
+        scorepos, scoretext = 1,"greatest"
     elseif player.score>=highscores[2].score
     then
-        self.scorepos, self.scoretext = 2,"2nd best"
-    else
-        self.scorepos, self.scoretext = 3,"3rd best"
+        scorepos, scoretext = 2,"2nd best"
     end
+
+    self.allcharsarray,self.initials,self.currentinitial,self.currentchar,self.scorepos,self.scoretext = 
+        split(self.allchars),{"a","a","a"},1,1,scorepos,scoretext
 end
 
 function highscorescreen:update()
@@ -41,23 +40,19 @@ function highscorescreen:update()
         return
     end
 
-    local chars = split(self.allchars)
     if btn(2)
     then 
         self.currentchar+=1
-        if (self.currentchar>#chars) self.currentchar=1
-        self.initials[self.currentinitial]=chars[self.currentchar]
-        self.cooldown=10
+        if (self.currentchar>#self.allcharsarray) self.currentchar=1
+        self.initials[self.currentinitial],self.cooldown=self.allcharsarray[self.currentchar],10
     elseif btn(3) then 
         self.currentchar-=1
-        if (self.currentchar<1) self.currentchar=#chars
-        self.initials[self.currentinitial]=chars[self.currentchar]
-        self.cooldown=10
+        if (self.currentchar<1) self.curre,ntchar=#self.allcharsarray
+        self.initials[self.currentinitial],self.cooldown=self.allcharsarray[self.currentchar],10
     elseif btn(5) 
     then
         self.currentinitial+=1
-        self.currentchar=1
-        self.cooldown=30
+        self.currentchar,self.cooldown=1,30
     end
 
     if self.currentinitial > 3
@@ -78,21 +73,56 @@ function highscorescreen:update()
         else
             highscores[3]=score
         end
+        -- save scores
+        self:save_scores()
         gameoverscreen:init()
     end
+end
+
+function highscorescreen:load_scores()
+    -- load high score table
+    local savedscores = dget(0)
+    if (savedscores!=0)
+    then
+        self.allcharsarray=split(self.allchars)
+
+        for x=0,8,4 do
+            highscores[(x+4)/4]={
+                score=dget(x),
+                name=self.allcharsarray[dget(x+1)]..self.allcharsarray[dget(x+2)]..self.allcharsarray[dget(x+3)]
+            } 
+        end
+    end
+end
+
+function highscorescreen:save_scores()
+    local mem=0
+    for r in all(highscores) do 
+        dset(mem,r.score)
+        local namearray=self:encode_name(r.name)
+        for x=1,3 do 
+            dset(mem+x,namearray[x])
+        end
+        mem+=4
+    end
+end
+
+function highscorescreen:encode_name(name)
+    local result = {}
+    for x=1, 3 do 
+        for y=1,#self.allcharsarray do 
+            if (self.allcharsarray[y]==sub(name,x,x)) add(result,y)
+        end
+    end
+    return result
 end
 
 function highscorescreen:draw()
     cls(0)
     screen:draw_scores()
     screen:draw_highscores()
-    local linebase = 4
-    utilities.print_text("congratulations", linebase, 14)
-    utilities.print_text("player 1", linebase+2, 14)
-    utilities.print_text("you have earned", linebase+5, 8)
-    utilities.print_text("the "..self.scoretext.." score", linebase+7, 8)
-    utilities.print_text("record your initials below", linebase+9, 10)
 
+    utilities.print_texts("congratulations,4,14,player 1,6,14,you have earned,9,8,the "..self.scoretext.." score,11,8,record your initials below,13,10")
     for x=1,3 do
         local col=10
         if (self.currentinitial==x) col=11

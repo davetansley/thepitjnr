@@ -3,11 +3,11 @@ robot = {
     y = 16,
     dir = directions.down,
     flipx = true,
-    sprites = {132,133,134,135},
+    sprites = split("132,133,134,135"),
     currentframe=1,
     colors={8,11,12},
     newcolors={8,11,12},
-    possiblecolors={7,8,9,10,11,12,13,14},
+    possiblecolors=split("7,8,9,10,11,12,13,14"),
     autoframes=0,
     killed=false, -- has the robot killed the player
     dying=false,
@@ -21,20 +21,15 @@ robot = {
     
 }
 
-function robot:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+robot = entity:new(robot)
 
 function robot:update()
 
     if self.dying == true 
     then
         -- robot has been shot - update palette, reduce frames, remove
-        self.colors = self.newcolors
-        self:generate_pallete()
+        self.colors = {self.newcolors[1],self.newcolors[2],self.newcolors[3]}
+        self.newcolors = utilities.generate_pallete(self.possiblecolors)
         self.autoframes-=1
         if (self.autoframes<0) del(game.robots,self)
         return
@@ -50,7 +45,7 @@ function robot:update()
     if (player:is_dying() == 1) return -- freeze all other robots
 
     -- for down and up, update every frame
-    if (game.frame%game.level.robotspeed != 0 and self.dir != directions.down and self.dir != directions.up) return
+    if (game.frame%game.settings[1] != 0 and self.dir != directions.down and self.dir != directions.up) return
     
     if self.autoframes == 0
     then
@@ -110,10 +105,10 @@ function robot:update()
 end
 
 function robot:draw()
-    
-    pal(self.colors[1],self.newcolors[1])
-    pal(self.colors[2],self.newcolors[2])
-    pal(self.colors[3],self.newcolors[3])
+   
+    for x=1,3 do
+        pal(self.colors[x],self.newcolors[x])
+    end 
 
     spr(self.sprites[self.currentframe], self.x, self.y, 1, 1, self.flipx )
     
@@ -165,17 +160,5 @@ function robot:check_can_move(dir, reversedir, moves)
     if (canmove == 1) add(moves, dir)
 
     return moves
-end
-
-function robot:generate_pallete()
-    local i1,i2,i3,found = 0,0,0,0
-
-    while found == 0 do 
-        i1 = flr(rnd(#self.possiblecolors))+1
-        i2 = flr(rnd(#self.possiblecolors))+1
-        i3 = flr(rnd(#self.possiblecolors))+1
-        if (i1 != i2 and i1 != i3) found = 1
-    end
-    self.newcolors={self.possiblecolors[i1],self.possiblecolors[i2],self.possiblecolors[i3]}
 end
 

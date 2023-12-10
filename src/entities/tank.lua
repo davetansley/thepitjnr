@@ -7,24 +7,17 @@ tank_states = {
 tank = {
     x = 128,
     y = 8,
-    sprites = {100,101},
+    sprite = 100,
     fire_sprite = 104,
     bullet_sprite = 105,
     state = tank_states.moving,
     framesperupdate=4,
     frames=0,
     delay=120,
-    anims={
-        {100,101},{102,103}
-    }
+    anims={100,102}
 }
 
-function tank:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+tank=entity:new(tank)
 
 function tank:update()
     if self.delay > 0
@@ -43,21 +36,20 @@ function tank:update()
         end
         if self.x == 96 then self.state = tank_states.shooting end    
     end
-    if self.frames%4==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+    if self.frames%4==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
 end
 
 function tank:draw()
-    for x=1,#self.sprites do 
-        spr(self.sprites[x], self.x+(8*x-8), self.y)
-    end
+    spr(self.sprite, self.x, self.y,2,1)
 
-    if game.frame % game.tickframes == 0 and self.state == tank_states.shooting and game.ship.state != ship_states.fleeing 
+    if game.frame % game.settings[3] == 0 and self.state == tank_states.shooting and game.ship.state != ship_states.fleeing 
             and game.ship.state != ship_states.escaping
     then
         -- tank is firing
         spr(65,self.x,self.y)
         spr(self.fire_sprite,self.x,self.y)
         spr(self.bullet_sprite, self.x-16,self.y)
+        utilities:sfx(9)
     end
 end
 

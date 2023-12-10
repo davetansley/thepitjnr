@@ -12,6 +12,8 @@ player_states = {
 player={
     score=0, -- key for storing score
     lives=3, -- key for storing lives
+    demo = {},
+    demopos = 1
 }
 
 directions = {
@@ -21,9 +23,9 @@ directions = {
     down = 3
 }
 
+demo = "18,3,6,0,36,3,8,0,80,3,8,2,12,1,40,3,4,1,18,3,6,0,12,2,4,0,24,3,16,2,12,0,18,2,4,1,24,2,2,1,32,2,3,1,32,2,5,1,8,3,4,1,18,2,2,1,27,2,1,0,8,2,0,-1"
 function player:init()
-    self.lives = 2
-    self.score = 0
+    self.lives,self.score,self.demo,self.demopos = 2,0,split(demo),1
     self:reset()
 end
 
@@ -48,7 +50,7 @@ end
 function player:reset()
     self.x, self.y, self.dir, self.sprite, self.oldsprite, self.framecount, self.framestomove, self.state,
         self.stateframes, self.incavern, self.inpit, self.animframes, self.firecooldown, self.diamonds, self.gems
-        =16,16,directions.right,0,0,0,0,0,0,0,0,10,0,0,0 
+        = 16,16,directions.right,0,0,0,0,0,0,0,0,10,0,0,0 
 end
 
 -- return 1 if the player is dying
@@ -59,7 +61,14 @@ end
 
 -- update the player state
 function player:update_player()
+
     if (self.state==player_states.escaping) return
+
+    if self.stateframes==0 and self:is_dying()==1
+    then
+        self:lose_life()
+        return
+    end
 
     if self.state==player_states.falling
     then
@@ -68,11 +77,7 @@ function player:update_player()
         if self.sprite == 4 then self.sprite=5 else self.sprite=4 end
         if (self.y <= levels.pitcoords[2][2]-1) self.y+=1
         self.stateframes-=1
-        if (self.stateframes==60) sfx(4)
-        if self.stateframes==0
-            then
-                self:lose_life()
-            end
+        if (self.stateframes==60) utilities:sfx(4)
         return
     end
 
@@ -82,10 +87,6 @@ function player:update_player()
         -- Player is being mauled
         if self.sprite == 2 then self.sprite=0 else self.sprite=2 end
         self.stateframes-=1
-        if self.stateframes==0
-            then
-                self:lose_life()
-            end
         return
     end
 
@@ -94,13 +95,14 @@ function player:update_player()
         -- Player is being squashed
         if game.frame%3==0
         then
-            if self.sprite == 10 then self.sprite=11 else self.sprite=10 end
+            if self.stateframes < 10
+            then
+                self.sprite=71
+            else
+                if self.sprite == 10 then self.sprite=11 else self.sprite=10 end
+            end
             self.stateframes-=1
         end
-        if self.stateframes==0
-            then
-                self:lose_life()
-            end
         return
     end
 
@@ -120,10 +122,7 @@ function player:update_player()
     if (self.firecooldown<0) self.firecooldown=0
 
     -- check if we've completed the level
-    if self:check_win()==1
-    then
-        return
-    end
+    if (self:check_win()==1) return
 
     -- check if we're falling in the pit
     if (self:check_pit()==1) return;
@@ -134,40 +133,54 @@ function player:update_player()
         self.stateframes-=1
         if self.stateframes<0 -- Let it go at 0 for a frame to enable digging
             then
-                self.state=player_states.moving
-                self.sprite=player.oldsprite
+                self.state,self.sprite=player_states.moving,player.oldsprite
             end    
         return
     end
 
     if self.framestomove!=0
     then
-        if self.dir==directions.right then self:move(1,0,0,1,directions.right,1) end
-        if self.dir==directions.left then self:move(-1,0,2,3,directions.left,1) end
+        if self.dir==directions.right then self:move(1,0,0,1,directions.right,1) else self:move(-1,0,2,3,directions.left,1) end
         self.framestomove-=1
     else
         -- start new movement
-        local moved = 0
-        local horiz = 0
-        if btn(0) then 
-            moved=self:move(-1,0,2,3,directions.left,0)
-            horiz=1                 
-        elseif btn(1) and moved==0 then 
-            moved=self:move(1,0,0,1,directions.right,0)
-            horiz=1 
-        elseif btn(2) and moved==0 then 
-            moved=self:move(0,-1,4,5,directions.up,0) 
-        elseif btn(3) and moved==0 then 
+        local moved,horiz,dir = 0,0,-1
+
+        if (game.demo==1) 
+        then
+            dir=self.demo[self.demopos+1]
+            self.demo[self.demopos]-=1
+            if (self.demo[self.demopos]==0 and self.demopos<#self.demo-1) self.demopos+=2
+            if (btn(4)) titlescreen:init()
+        else
+            if btn(0) 
+            then    
+                dir=directions.left
+            elseif btn(1) 
+            then    
+                dir=directions.right
+            elseif btn(2) 
+            then    
+                dir=directions.up
+            elseif btn(3) 
+            then    
+                dir=directions.down
+            elseif btn(5) then self:fire()
+            end
+        end
+
+        if (dir==0) moved,horiz=self:move(1,0,0,1,directions.right),1
+        if (dir==1 and moved==0) moved,horiz=self:move(-1,0,2,3,directions.left),1
+        if (dir==2 and moved==0) moved=self:move(0,-1,4,5,directions.up) 
+        if (dir==3 and moved==0) 
+        then 
             if self.inpit==0
             then
-                moved=self:move(0,1,4,5,directions.down,0)
+                moved=self:move(0,1,4,5,directions.down)
             else
-                self.sprite=0
-                self.dir=directions.right 
+                self.sprite,self.dir=0,directions.right
             end
-        elseif btn(5) then self:fire()
         end
-        
         if moved==1 and horiz==1 then self.framestomove=7 end
     end
 
@@ -178,8 +191,7 @@ end
 function player:check_win()
     if self.diamonds > 0 and self.x==16 and self.y==16 
     then
-        self.state=player_states.escaping
-        game.ship.state=ship_states.escaping
+        self.state,game.ship.state=player_states.escaping,ship_states.escaping
         return 1
     end
 
@@ -187,15 +199,13 @@ function player:check_win()
 end
 
 function player:check_pit()
-    if (self.inpit==0) return 0
-    
     -- check if the player is falling
-    if self.x >= levels.pitcoords[1][1]+game.bridge
-    then
-        self.state=player_states.falling
-        self.stateframes=100
+    if self.inpit==1 and self.x >= levels.pitcoords[1][1]+game.bridge 
+    then 
+        self.state,self.stateframes=player_states.falling,100
         return 1
     end
+    return 0
 end
 
 function player:fire()
@@ -208,10 +218,16 @@ function player:fire()
     b:set_coords(self.x+xmod,self.y,self.dir)
     add(bullets,b)
     self.firecooldown=15
-    sfx(3)
+    utilities:sfx(3)
 end
 
 function player:lose_life()
+    if (game.demo==1) 
+    then
+        titlescreen:init()
+        return
+    end 
+
     self.lives-=1
 
     if self.lives < 0
@@ -228,10 +244,7 @@ end
 -- check for player in the range specified
 -- return 1 if found, 0 if not
 function player:check_for_player(x1,x2,y1,y2)
-    local coords1 = {x1,x2,y1,y2}
-    local coords2 = {self.x,self.x+8,self.y,self.y+8}
-
-    return utilities:check_overlap(coords1,coords2)
+    return utilities:check_overlap({x1,x2,y1,y2},{self.x,self.x+8,self.y,self.y+8})
 end
 
 function player:kill_player(state)
@@ -300,15 +313,13 @@ function player:try_to_dig(dir)
     if game:check_for_dirt(coords[1], coords[3], coords[2], coords[4])==1
     then
         game:dig_dirt(coords[1], coords[3], coords[2], coords[4])
-        sfx(1)
+        utilities:sfx(1)
 
         -- Update this later to just set the player state - anims handled in draw
         if self.state==player_states.moving then 
             self.oldsprite=self.sprite
         end
-        self.state=player_states.digging
-        self.stateframes=14
-        self.sprite=6+dir
+        self.state,self.stateframes,self.sprite=player_states.digging,14,6+dir
     end
 end
 
@@ -323,7 +334,7 @@ end
 function player:move(x,y,s1,s2,d,auto)
     
     -- only check movement if this is auto movement
-    if auto==0
+    if auto!=1
     then
         local canmove=self:check_can_move(d)
         if canmove!=1

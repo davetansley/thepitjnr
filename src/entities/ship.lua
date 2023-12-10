@@ -9,19 +9,12 @@ ship_states = {
 ship = {
     x = 12,
     y = 0,
-    sprites = {96,97},
+    sprite = 96,
     state = ship_states.landing,
-    anims={
-        {96,97},{98,99}
-    }
+    anims={96,98}
 }
 
-function ship:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+ship=entity:new(ship)
 
 function ship:update()
 
@@ -39,6 +32,7 @@ function ship:update()
             then
                 self.x+=1
             else
+                if (self.y==8) utilities:sfx(8)
                 if self.y < -32
                 then
                     game:next_level()
@@ -46,7 +40,7 @@ function ship:update()
                     self.y-=1
                 end
             end
-            if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+            if game.frame%8==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
         end
         return
     end
@@ -55,6 +49,7 @@ function ship:update()
     then
         if game.frame%4==0
         then
+            if (self.y==8) utilities:sfx(8)
             self.y-=1
             if self.y < -64 -- hang around for a while, to rub it in
             then
@@ -69,22 +64,23 @@ function ship:update()
         if (self.x > 0) 
         then
             if (game.frame%4==0) self.x-=1 
-            if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+            if game.frame%8==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
         end
         return
     end
 
     if game.frame%6==0
     then
+
+        -- play ship landing
+        if (self.y==0) utilities:sfx(7)
         self.y += 1
     end
     if self.y == 8 then self.state = ship_states.lingering end    
-    if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+    if game.frame%8==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
 end
 
 function ship:draw()
-    for x=1,#self.sprites do 
-        spr(self.sprites[x], self.x+(8*x-8), self.y)
-    end
+    spr(self.sprite, self.x, self.y,2,1)
 end
 

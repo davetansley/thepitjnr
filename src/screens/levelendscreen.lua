@@ -19,18 +19,12 @@ function levelendscreen:init()
     -- work out score to give
     if player.diamonds==3 and player.gems==4
     then
-        self.score=scores.triplebonus
-        self.fullscore=scores.triplebonus
-        self.scoretext="triple bonus"
+        self.score,self.scoretext,self.fullscore=scores.triplebonus,"triple bonus",scores.triplebonus
     elseif player.diamonds==3
     then
-        self.score=scores.doublebonus
-        self.scoretext="double bonus"
-        self.fullscore=scores.doublebonus
+        self.score,self.scoretext,self.fullscore=scores.doublebonus,"double bonus",scores.doublebonus
     else
-        self.score=scores.singlebonus
-        self.scoretext="single bonus"
-        self.fullscore=scores.singlebonus
+        self.score,self.scoretext,self.fullscore=scores.singlebonus,"single bonus",scores.singlebonus
     end
 end
 
@@ -38,7 +32,12 @@ function levelendscreen:update()
 
     if self.timer >= self.showfor then 
         self.timer = 0
-        game:switchto()   
+        if game.currentlevel>8
+        then
+            congratulationsscreen:init()
+        else
+            game:switchto()  
+        end 
     end 
     if self.score==0
     then
@@ -51,7 +50,7 @@ function levelendscreen:update()
             if self.score<100 then toadd=self.score else toadd=100 end
             player.score+=toadd
             self.score-=toadd
-            sfx(5) 
+            utilities:sfx(5) 
         end
     end
 
@@ -62,13 +61,7 @@ function levelendscreen:draw()
     cls(11)
 
     screen:draw_scores()
-    local linebase = 5
-    utilities.print_text("congratulations", linebase, 1)
-    utilities.print_text("player 1", linebase+2, 1)
-    utilities.print_text("you have earned", linebase+5, 2)
-    utilities.print_text(self.scoretext, linebase+7, 10)
-    utilities.print_text(""..self.fullscore.." points", linebase+9, 2)
-    utilities.print_text("have another go", linebase+11, 8)
+    utilities.print_texts("congratulations,5,1,player 1,7,1,you have earned,10,2,"..self.scoretext..",12,10,"..self.fullscore.." points,14,2,have another go,16, 8")
 
 end
 

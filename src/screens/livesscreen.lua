@@ -11,11 +11,11 @@ function livesscreen:init()
     draw=function ()
         livesscreen:draw()
     end
-
     if game.state==game_states.waiting
     then
         player:init()
     end
+    utilities:sfx(6)
 end
 
 function livesscreen:update()
@@ -36,14 +36,9 @@ function livesscreen:draw()
     cls(1)
 
     rectfill(46,11,79,17,0)
-    utilities.print_text("player 1",2,7)
-
-    if player.lives==0 
-    then
-        utilities.print_text("last man", 5, 10)
-    else
-        utilities.print_text(""..(player.lives+1).." men left", 5, 10)
-    end
+    local livestext = "last man"
+    if (player.lives != 0) livestext = ""..(player.lives+1).." men left"
+    utilities.print_texts("player 1,2,7,"..livestext..",5,10")
     
 end
 

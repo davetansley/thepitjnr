@@ -3,6 +3,10 @@ screen = {
     mapx = 0
 }
 
+view = {
+    y = 0
+}
+
 function screen:init()
     self.mapx=16*(game.currentlevel-1)
     screen:populate_map()
@@ -21,6 +25,7 @@ function screen:draw()
     -- draw dirt
     screen:draw_dirt()
     screen:draw_bridge()
+    if (game.demo==1) utilities.print_text("demo",3.5,12,1)
 end
 
 function screen:draw_bridge()
@@ -53,7 +58,7 @@ function screen:draw_highscores()
 
 end
 
--- Walk the map and replace any entity sprites
+-- Walk the map and replace any object sprites
 -- Store details about each tile in the map array, initialise any dirt tiles
 function screen:populate_map()
     self.tiles={}
@@ -63,35 +68,36 @@ function screen:populate_map()
             local sprite = mget(x+self.mapx,y)
 
             local tile = {}
-            tile.sprite=sprite
-            tile.block=0
-            tile.dirty=0
-            tile.dirt=""
-
+            tile.sprite,tile.block,tile.dirty,tile.dirt=sprite,0,0,""
+            
             if sprite==71 -- rock
             then
                 mset(x+self.mapx,y,255)
                 local r = rock:new()
                 r:set_coords(x,y)
                 add(rocks,r)
+                add(game.objects,r)
             elseif sprite==73 -- bomb
             then
                 mset(x+self.mapx,y,255)
                 local b = bomb:new()
                 b:set_coords(x,y)
                 add(bombs,b)
+                add(game.objects,b)
             elseif sprite==75 -- diamond
             then
                 mset(x+self.mapx,y,255)
                 local d = diamond:new()
                 d:set_coords(x,y)
                 add(diamonds,d)
+                add(game.objects,d)
             elseif sprite==86 -- gem
             then
                 mset(x+self.mapx,y,255)
                 local g = gem:new()
                 g:set_coords(x,y)
                 add(gems,g)
+                add(game.objects,g)
             elseif sprite== 70 -- dirt
             then
                 -- initialise a dirt tile
@@ -117,8 +123,7 @@ function screen:draw_dirt()
                 if sub(tile.dirt,d,d)=="0" 
                 then 
                     -- set this row to black
-                    local x1=x*8
-                    local y1=y*8+(d-1) 
+                    local x1,y1=x*8,y*8+(d-1)
                     for p=x1,x1+7 do
                         pset(p,y1,0)
                     end
@@ -130,9 +135,8 @@ function screen:draw_dirt()
 end
 
 function screen:check_camera()
-    if game.state==game_states.waiting then view.y = 0 return end
 
     -- check for need to reset camera
-    if player.y>=96 and view.y==0 and player.state!=player_states.falling then view.y=64 end
-    if player.y<=88 and view.y==64 then view.y=0 end
+    if player.y>=96 and player.state!=player_states.falling then view.y=64 end
+    if game.state==game_states.waiting or player.y<=80 then view.y=0 end
 end

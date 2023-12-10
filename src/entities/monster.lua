@@ -10,15 +10,10 @@ monster = {
     ymod=-1,
     colors={8,10,14},
     newcolors={8,10,14},
-    possiblecolors={2,3,4,5,6,8,9,10,11,12,13,14,15}
+    possiblecolors=split("2,3,4,5,6,8,9,10,11,12,13,14,15")
 }
 
-function monster:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+monster=entity:new(monster)
 
 function monster:update()
     if self.delay > 0
@@ -61,13 +56,13 @@ function monster:draw()
     -- generate new colors
     if self.y >= levels.pitcoords[2][2]-8 and self.delay == 0
     then
-        self:generate_pallete()
+        self.newcolors = utilities.generate_pallete(self.possiblecolors)
     end 
 
     -- swap palette
-    pal(self.colors[1],self.newcolors[1])
-    pal(self.colors[2],self.newcolors[2])
-    pal(self.colors[3],self.newcolors[3])
+    for x=1,3 do
+        pal(self.colors[x],self.newcolors[x])
+    end
     
     if self.y < levels.pitcoords[2][2]-8
     then
@@ -86,15 +81,4 @@ function monster:draw()
     
 end
 
-function monster:generate_pallete()
-    local i1,i2,i3,found = 0,0,0,0
-
-    while found == 0 do 
-        i1 = flr(rnd(#self.possiblecolors))+1
-        i2 = flr(rnd(#self.possiblecolors))+1
-        i3 = flr(rnd(#self.possiblecolors))+1
-        if (i1 != i2 and i1 != i3) found = 1
-    end
-    self.newcolors={self.possiblecolors[i1],self.possiblecolors[i2],self.possiblecolors[i3]}
-end
 

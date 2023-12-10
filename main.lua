@@ -23,11 +23,6 @@ highscores={
     }
 }
 
--- game speeds in number of frames before next update
-game_speeds = {
-    bridge=8
-}
-
 game_states = {
     waiting = 0,
     running = 1
@@ -41,20 +36,30 @@ game = {
     tank={},
     monster={},
     robots={},
+    objects={},
     frame=0,
     mountain={10,9,8,7,6,5,4},
     currentmountain=1,
     currentmountaincount=0,
-    tickframes=150, -- how many frames before we process the timer?
+    settings={},
+    demo=0,
     bridge=24 -- how much is the bridge extended
 }
+function game:init_demo()
+    self.demo=1
+    self:start()
+end
 
 function game:init()
+    self.demo=0
+    self:start()
+end
+
+function game:start()
     self.switchto()
 
     -- config variables
-    self.currentlevel=1
-    self.highscore=highscores[1].score
+    self.currentlevel,self.highscore=1,highscores[1].score
     player:init()
     
     -- viewport variables
@@ -90,37 +95,19 @@ function game:update()
         return;
     end
 
-    for r in all(rocks) do
-        r:update()
-    end
-
-    for r in all(bombs) do
-        r:update()
-    end
-
-    for r in all(diamonds) do
-        r:update()
-    end
-
-    for r in all(gems) do
-        r:update()
-    end
+    self:update_array(self.objects)
 
     -- if we need a robot, spawn it
-    if self.tank.state==tank_states.shooting and #self.robots < self.level.robots and self.frame%150 == 0
+    if self.tank.state==tank_states.shooting and #self.robots < self.settings[2] and self.frame%game.settings[6] == 0
     then
         local r = robot:new()
-        r:generate_pallete()
+        r.newcolors = utilities.generate_pallete(r.possiblecolors)
         add(self.robots,r)
     end
 
-    for r in all(bullets) do
-        r:update()
-    end
+    self:update_array(bullets)
 
-    for r in all(self.robots) do
-        r:update()
-    end
+    self:update_array(self.robots)
 
     if self.tank.state == tank_states.moving
     then
@@ -133,7 +120,7 @@ function game:update()
         player:update()
     end
 
-    if player.inpit==1 and game.frame%game_speeds.bridge==0
+    if player.inpit==1 and game.frame%game.settings[5]==0
     then
         -- reduce pit bridge by 1
         game.bridge-=1
@@ -147,29 +134,9 @@ end
 function game:draw()
     screen:draw()
 
-    for r in all(rocks) do
-        r:draw()
-    end
-
-    for r in all(bombs) do
-        r:draw()
-    end
-
-    for r in all(diamonds) do
-        r:draw()
-    end
-
-    for r in all(gems) do
-        r:draw()
-    end
-
-    for r in all(self.robots) do
-        r:draw()
-    end
-
-    for r in all(bullets) do
-        r:draw()
-    end
+    self:draw_array(self.objects)
+    self:draw_array(self.robots)
+    self:draw_array(bullets)
 
     self.ship:draw()
 
@@ -186,33 +153,45 @@ function game:draw()
     self.monster:draw()
 end
 
+function game:update_array(array)
+    for r in all(array) do
+        r:update()
+    end
+end
+
+function game:draw_array(array)
+    for r in all(array) do
+        r:draw()
+    end
+end
+
 function game:reset()
     
-    view.y=0
-
     self.level = levels[self.currentlevel]
+    self.settings = split(self.level.settings)
 
     -- Create a new ship and tank
-    self.ship = ship:new()
-    self.tank = tank:new()
-    self.monster = monster:new()
-    self.robots = {}
-    self.bridge = 24
-
+    self.ship, self.tank,self.monster,self.robots,self.bridge, self.objects,view.y = ship:new(),tank:new(), monster:new(),{},24,{},0
+   
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
 
     -- Populate entities
     rocks,bombs,diamonds,gems,bullets={},{},{},{},{}
 
-    game.currentmountain=1
-    game.currentmountaincount=0
+    game.currentmountain,game.currentmountaincount=1,0
 
     screen:init()
 
 end
 
 function game:next_level()
+    if (self.demo==1) 
+    then
+        titlescreen:init()
+        return
+    end
+
     self.currentlevel+=1
     levelendscreen:init()
     player:reset()
@@ -221,12 +200,11 @@ end
 
 function game:update_timer()
 
-    if (self.frame % game.tickframes != 0 or self.tank.state != tank_states.shooting) return
+    if (self.frame % game.settings[3] != 0 or self.tank.state != tank_states.shooting) return
 
     if self.currentmountain > #self.mountain
     then
-        view.y = 0
-        self.ship.state = ship_states.fleeing
+        view.y,self.ship.state = 0,ship_states.fleeing
         return
     end
 
@@ -274,7 +252,7 @@ end
 function game:show_gameover()
     self.state=game_states.waiting
     view.y=0
-    camera(0,0)
+    camera()
     if player.score > 0 and player.score >= highscores[3].score
     then
         highscorescreen:init()
@@ -389,44 +367,49 @@ end
 
 
 
+-- robotspeed,robots,tankspeed,missilespeed,bridgespeed,robotspawnrate
+-- robotspeed - 1 fastest
+-- robots - number spawned at one time
+-- tankspeed - frames before next shot (divide by 60 for seconds, 28 total shots - tankspeed 60 = 28 seconds)
+-- missilespeed - percentage chance of falling per frame
+-- bridgespeed - 1 fastest
+-- robotspawnrate - frames till next spawn
 levels={
     caverncoords={{40,144},{80,184}},
     pitcoords={{8,64},{24,104}}, 
     {
-        robots=2,
-        robotspeed=6 -- speed of robots, 1 fastest  
+        settings="6,2,180,0.5,4,300"  
     },
     {
-        robots=2,
-        robotspeed=5 -- speed of robots, 1 fastest  
+        settings="5,3,180,0.6,3,300"  
     },
     {
-        robots=3,
-        robotspeed=4 -- speed of robots, 1 fastest  
+        settings="4,3,150,0.7,3,200"  
     },
     {
-        robots=3,
-        robotspeed=3 -- speed of robots, 1 fastest  
+        settings="3,3,150,0.8,3,200"  
     },
     {
-        robots=4,
-        robotspeed=3 -- speed of robots, 1 fastest  
+        settings="3,4,150,0.9,2,200"  
     },
     {
-        robots=4,
-        robotspeed=2 -- speed of robots, 1 fastest  
+        settings="2,4,120,1.0,2,150"  
     },
     { 
-        robots=4,
-        robotspeed=1 -- speed of robots, 1 fastest  
+        settings="2,4,120,1.5,1,150"  
     },
     {
-        robots=2,
-        robotspeed=5 -- speed of robots, 1 fastest  
+        settings="1,4,120,0.5,1,100" 
     }
 }
+cart_id="thepitjnrv1"
+
 -- init
 function _init()
+    cartdata(cart_id)
+
+    highscorescreen:load_scores()
+
     titlescreen:init()
 end
 
@@ -443,6 +426,10 @@ end
 screen = {
     tiles = {},
     mapx = 0
+}
+
+view = {
+    y = 0
 }
 
 function screen:init()
@@ -463,6 +450,7 @@ function screen:draw()
     -- draw dirt
     screen:draw_dirt()
     screen:draw_bridge()
+    if (game.demo==1) utilities.print_text("demo",3.5,12,1)
 end
 
 function screen:draw_bridge()
@@ -495,7 +483,7 @@ function screen:draw_highscores()
 
 end
 
--- Walk the map and replace any entity sprites
+-- Walk the map and replace any object sprites
 -- Store details about each tile in the map array, initialise any dirt tiles
 function screen:populate_map()
     self.tiles={}
@@ -505,35 +493,36 @@ function screen:populate_map()
             local sprite = mget(x+self.mapx,y)
 
             local tile = {}
-            tile.sprite=sprite
-            tile.block=0
-            tile.dirty=0
-            tile.dirt=""
-
+            tile.sprite,tile.block,tile.dirty,tile.dirt=sprite,0,0,""
+            
             if sprite==71 -- rock
             then
                 mset(x+self.mapx,y,255)
                 local r = rock:new()
                 r:set_coords(x,y)
                 add(rocks,r)
+                add(game.objects,r)
             elseif sprite==73 -- bomb
             then
                 mset(x+self.mapx,y,255)
                 local b = bomb:new()
                 b:set_coords(x,y)
                 add(bombs,b)
+                add(game.objects,b)
             elseif sprite==75 -- diamond
             then
                 mset(x+self.mapx,y,255)
                 local d = diamond:new()
                 d:set_coords(x,y)
                 add(diamonds,d)
+                add(game.objects,d)
             elseif sprite==86 -- gem
             then
                 mset(x+self.mapx,y,255)
                 local g = gem:new()
                 g:set_coords(x,y)
                 add(gems,g)
+                add(game.objects,g)
             elseif sprite== 70 -- dirt
             then
                 -- initialise a dirt tile
@@ -559,8 +548,7 @@ function screen:draw_dirt()
                 if sub(tile.dirt,d,d)=="0" 
                 then 
                     -- set this row to black
-                    local x1=x*8
-                    local y1=y*8+(d-1) 
+                    local x1,y1=x*8,y*8+(d-1)
                     for p=x1,x1+7 do
                         pset(p,y1,0)
                     end
@@ -572,11 +560,10 @@ function screen:draw_dirt()
 end
 
 function screen:check_camera()
-    if game.state==game_states.waiting then view.y = 0 return end
 
     -- check for need to reset camera
-    if player.y>=96 and view.y==0 and player.state!=player_states.falling then view.y=64 end
-    if player.y<=88 and view.y==64 then view.y=0 end
+    if player.y>=96 and player.state!=player_states.falling then view.y=64 end
+    if game.state==game_states.waiting or player.y<=80 then view.y=0 end
 end
 utilities = {}
 
@@ -649,7 +636,7 @@ function utilities:check_overlap(coords1,coords2)
     return 0
 end
 
--- check a range of pixels that the entity is about to move into
+-- check a range of pixels that the object is about to move into
 -- if can't move return 0
 -- if can move return 1
 function utilities:check_can_move(dir, coords, bullet)
@@ -688,25 +675,66 @@ function utilities:check_can_move(dir, coords, bullet)
     return 1
 end
 
-function utilities.print_text(text, line, colour)
-    local ydelta=6
-    local x = 64 - 4*(#text/2)
-    print(text, x, ydelta*line,colour)
+function utilities.print_text(text, line, colour, bgcolor)
+    local ydelta,x,w=6,64 - 4*(#text/2),4*#text
+    local y=ydelta*line
+    if bgcolor
+    then
+        rectfill(x-4,y-2,x+w+2,y+6,bgcolor)
+    end
+    print(text,x,y,colour)
+end
+
+function utilities.print_texts(text)
+    local items=split(text)
+    for x=1,#items,3 do 
+        utilities.print_text(items[x],tonum(items[x+1]),tonum(items[x+2]))
+    end
+end
+
+-- generates a palette of three random colours from a selection passed as a parameter
+function utilities.generate_pallete(possiblecolors)
+    local i1,i2,i3,found = 0,0,0,0
+
+    while found == 0 do 
+        i1,i2,i3 = flr(rnd(#possiblecolors))+1,flr(rnd(#possiblecolors))+1,flr(rnd(#possiblecolors))+1
+        if (i1 != i2 and i1 != i3) found = 1
+    end
+    return {possiblecolors[i1],possiblecolors[i2],possiblecolors[i3]}
+end
+
+function utilities:sfx(sound)
+    if (game.demo==0) sfx(sound)
+end
+    
+
+entity = {
+    x = 0,
+    y = 0,
+    sprite = 0
+} 
+
+-- the entity class constructor
+function entity:new(o) 
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function entity:draw()
+    spr(self.sprite,self.x,self.y)
 end
 bullets = {}
 
 bullet = {
     x = 0,
     y = 0,
-    dir = 0
+    dir = 0,
+    sprite = 14
 }
 
-function bullet:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+bullet=entity:new(bullet)
 
 function bullet:update()
 
@@ -735,265 +763,13 @@ function bullet:update()
         end
     end
 
-    if self.dir == directions.right
-    then
-        self.x+=8
-    else
-        self.x-=8
-    end
-end
-
-function bullet:draw()
-    spr(14,self.x,self.y)
+    local xmod = self.dir == directions.right and 8 or -8
+    self.x+=xmod
 end
 
 function bullet:set_coords(x,y,dir)
     self.x,self.y,self.dir = x,y,dir
 end
--- Collections of objects
-rocks={}
-diamonds={}
-gems={}
-bombs={}
-
-entity_states={
-    idle="idle",
-    preparing="preparing",
-    falling="falling",
-    invisible="invisible"
-}
-
-entity_types={
-    rock=0,
-    bomb=1,
-    diamond=2,
-    gem=3
-}
-
--- default attribute values for an "entity" class
-entity = {
-    x = 0,
-    y = 0,
-    sprite = 0,
-    state = entity_states.idle,
-    time = 0,
-    preparingtime=60,
-    anims = {
-        idle={},
-        preparing={},
-        falling={}
-    },
-    framecount=0,
-    animindex=1,
-    reset = function(self)
-        self.framecount=1
-        self.animindex=1
-    end    
-}
-
--- the entity class constructor
-function entity:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
-function entity:draw()
-    spr(self.sprite,self.x,self.y)   
-end
-
-function entity:set_coords(xcell,ycell)
-    self.x=xcell*8
-    self.y=ycell*8   
-end
-
-function entity:check_kill()
-    
-    if self.state!=entity_states.falling then return end
-
-    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
-    if player:check_for_player(coords[1],coords[2],coords[3],coords[4])==1 
-    then 
-        if self.type==entity_types.rock
-        then
-            player:kill_player(player_states.crushed)
-        elseif self.type==entity_types.bomb
-        then
-            player:kill_player(player_states.bombed)
-        end 
-    end
-    
-end
-
-function entity:update_faller()
-    -- check below for space to fall
-    local canfall=self:check_can_fall() 
-    if self.type==entity_types.bomb and self.state==entity_states.idle
-    then
-        -- for bombs, check random number
-        local rand=rnd(300)
-        if rand>1 then canfall=0 end
-    end
-    if canfall==1 and player:is_dying()==0
-    then
-        if self.state==entity_states.falling
-        then
-            -- actually falling
-            self.y+=1
-        elseif self.state==entity_states.preparing
-        then
-            self.time+=1
-            if self.time >= self.preparingtime 
-            then
-                self.state=entity_states.falling
-            end
-        elseif self.state==entity_states.idle
-        then 
-            self.state=entity_states.preparing
-            self.time=0 
-            self:reset()
-        end
-        
-        -- update sprite
-        if (game.frame%3==0)
-        then
-            self.framecount+=1
-            self.animindex = (self.animindex % #self.anims[self.state]) + 1
-            self.sprite =  self.anims[self.state][self.animindex]
-        end
-    else
-        if self.state==entity_states.falling then sfx(2) end
-        self.state=entity_states.idle
-    end
-    
-end
-
--- check a range of pixels that the rock is about to move into
--- if can't fall return 0
--- if can fall return 1
-function entity:check_can_fall() 
-    if self.y>=184 then return 0 end -- prevent out of bounds
-
-    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
-
-    -- check for an overlap with the player top line
-    if coords[2] >= player.x and player.x+7 >= coords[1] and player.y == coords[3]
-    then
-        return 1
-    end
-
-    -- check other rocks
-    for r=1,#rocks do 
-        local rock=rocks[r]
-        if rock.y==self.y+8 and rock.x==self.x then return 0 end
-    end
-
-    -- check dirt array
-    local cellcoords = utilities.point_coords_to_cells(coords[1], coords[3])
-    local offset=coords[3]%8
-    local tile = screen.tiles[cellcoords[2]][cellcoords[1]]
-    if sub(tile.dirt,offset+1,offset+1)=="1" or tile.block==1 then return 0 end
-    
-    return 1
-end
-
--- check if a pickup is overlapping the player. If so, collect
-function entity:update_pickup(score)
-    if self.framecount>=self.anims[self.state].fr
-    then
-        self.animindex = (self.animindex % #self.anims[self.state]) + 1
-        self.sprite =  self.anims[self.state][self.animindex]
-        self.framecount=1
-    else
-        self.framecount+=1
-    end 
-
-    local ymod=0
-    if (self.type==entity_types.gem) ymod=4
-
-    if player:check_for_player(self.x,self.x+7,self.y+ymod,self.y+7)==1 and self.state == entity_states.idle
-    then
-        self.state = entity_states.invisible
-        player:add_score(score)
-        if self.type==entity_types.diamond then player.diamonds+=1 else player.gems+=1 end
-        sfx(0)
-    end
-end
-
-
--- subclasses of entity
-rock = entity:new(
-    {
-        type = entity_types.rock,
-        preparingtime = 80,
-        sprite = 71, 
-        anims = {
-            idle={fr=1,71},
-            preparing={fr=1,71,72},
-            falling={fr=1,71}
-        }
-    }
-)
-
-function rock:update()
-    self:update_faller()
-    self:check_kill()
-end
-
-function rock:draw()
-    spr(self.sprite,self.x,self.y)   
-end
-
-bomb = entity:new(
-    {
-        type = entity_types.bomb,
-        preparingtime = 60,
-        sprite = 73, 
-        anims = {
-            idle={fr=1,73},
-            preparing={fr=1,74},
-            falling={fr=1,74}
-        }
-    }
-)
-
-function bomb:update()
-    if player.incavern==0 then return end
-    self:update_faller()
-    self:check_kill()
-end
-
-diamond = entity:new(
-    {
-        type = entity_types.diamond,
-        sprite = 75, 
-        anims = {
-            idle={fr=4,75,76,77},
-            invisible={fr=1,255}
-        }
-    }
-)
-
-function diamond:update()
-    self:update_pickup(scores.diamond)
-end
-
-gem = entity:new(
-    {
-        type = entity_types.gem,
-        sprite = 86, 
-        anims = {
-            idle={fr=4,86,87,88,89},
-            invisible={fr=1,255}
-        }
-    }
-)
-
-function gem:update()
-    self:update_pickup(scores.gem)
-end
-
 monster = {
     x = 12,
     y = 96,
@@ -1006,15 +782,10 @@ monster = {
     ymod=-1,
     colors={8,10,14},
     newcolors={8,10,14},
-    possiblecolors={2,3,4,5,6,8,9,10,11,12,13,14,15}
+    possiblecolors=split("2,3,4,5,6,8,9,10,11,12,13,14,15")
 }
 
-function monster:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+monster=entity:new(monster)
 
 function monster:update()
     if self.delay > 0
@@ -1057,13 +828,13 @@ function monster:draw()
     -- generate new colors
     if self.y >= levels.pitcoords[2][2]-8 and self.delay == 0
     then
-        self:generate_pallete()
+        self.newcolors = utilities.generate_pallete(self.possiblecolors)
     end 
 
     -- swap palette
-    pal(self.colors[1],self.newcolors[1])
-    pal(self.colors[2],self.newcolors[2])
-    pal(self.colors[3],self.newcolors[3])
+    for x=1,3 do
+        pal(self.colors[x],self.newcolors[x])
+    end
     
     if self.y < levels.pitcoords[2][2]-8
     then
@@ -1082,16 +853,259 @@ function monster:draw()
     
 end
 
-function monster:generate_pallete()
-    local i1,i2,i3,found = 0,0,0,0
 
-    while found == 0 do 
-        i1 = flr(rnd(#self.possiblecolors))+1
-        i2 = flr(rnd(#self.possiblecolors))+1
-        i3 = flr(rnd(#self.possiblecolors))+1
-        if (i1 != i2 and i1 != i3) found = 1
+-- Collections of objects
+rocks={}
+diamonds={}
+gems={}
+bombs={}
+
+object_states={
+    idle="idle",
+    preparing="preparing",
+    falling="falling",
+    invisible="invisible"
+}
+
+object_types={
+    rock=0,
+    bomb=1,
+    diamond=2,
+    gem=3
+}
+
+-- default attribute values for an "object" class
+object = {
+    x = 0,
+    y = 0,
+    sprite = 0,
+    state = object_states.idle,
+    time = 0,
+    preparingtime=60,
+    anims = {
+        idle={},
+        preparing={},
+        falling={}
+    },
+    framecount=0,
+    animindex=1,
+    killed=false,
+    reset = function(self)
+        self.framecount=1
+        self.animindex=1
+    end    
+}
+
+-- the object class constructor
+function object:new(o) 
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function object:draw()
+    spr(self.sprite,self.x,self.y)   
+end
+
+function object:set_coords(xcell,ycell)
+    self.x,self.y=xcell*8,ycell*8
+end
+
+function object:check_kill()
+    
+    if self.state!=object_states.falling then return end
+
+    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
+    if player:check_for_player(coords[1],coords[2],coords[3],coords[4])==1 
+    then 
+        if self.type==object_types.rock
+        then
+            player:kill_player(player_states.crushed)
+        elseif self.type==object_types.bomb
+        then
+            player:kill_player(player_states.bombed)
+        end 
+        self.killed=true
     end
-    self.newcolors={self.possiblecolors[i1],self.possiblecolors[i2],self.possiblecolors[i3]}
+    
+end
+
+function object:update_faller()
+    -- check below for space to fall
+    local canfall=self:check_can_fall() 
+    if self.type==object_types.bomb and self.state==object_states.idle
+    then
+        -- for bombs, check random number
+        local rand=rnd(100)
+        if rand>game.settings[4] then canfall=0 end
+    end
+    if canfall==1 and player:is_dying()==0
+    then
+        if self.state==object_states.falling
+        then
+            -- actually falling
+            self.y+=1
+        elseif self.state==object_states.preparing
+        then
+            self.time+=1
+            if self.time >= self.preparingtime 
+            then
+                self.state=object_states.falling
+            end
+        elseif self.state==object_states.idle
+        then 
+            self.state,self.time=object_states.preparing,0
+            self:reset()
+        end
+        
+        -- update sprite
+        if (game.frame%3==0)
+        then
+            self.framecount+=1
+            self.animindex,self.sprite = (self.animindex % #self.anims[self.state]) + 1,self.anims[self.state][self.animindex]
+        end
+    else
+        if player:is_dying()==1
+        then
+            if player.stateframes==9 then utilities:sfx(2) end 
+        else
+            if self.state==object_states.falling then utilities:sfx(2) end
+        end
+        self.state=object_states.idle
+    end
+    
+end
+
+-- check a range of pixels that the rock is about to move into
+-- if can't fall return 0
+-- if can fall return 1
+function object:check_can_fall() 
+    if (self.y>=184) return 0  -- prevent out of bounds
+
+    local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
+
+    -- check for an overlap with the player top line
+    if coords[2] >= player.x and player.x+7 >= coords[1] and player.y == coords[3]
+    then
+        return 1
+    end
+
+    -- check other rocks
+    for r=1,#rocks do 
+        local rock=rocks[r]
+        if rock.y==self.y+8 and rock.x==self.x then return 0 end
+    end
+
+    -- check dirt array
+    local cellcoords,offset = utilities.point_coords_to_cells(coords[1], coords[3]),coords[3]%8
+    local tile = screen.tiles[cellcoords[2]][cellcoords[1]]
+    if sub(tile.dirt,offset+1,offset+1)=="1" or tile.block==1 then return 0 end
+    
+    return 1
+end
+
+-- check if a pickup is overlapping the player. If so, collect
+function object:update_pickup(score)
+    if self.framecount>=self.anims[self.state].fr
+    then
+        self.animindex,self.sprite,self.framecount = (self.animindex % #self.anims[self.state]) + 1,self.anims[self.state][self.animindex],1
+    else
+        self.framecount+=1
+    end 
+
+    local ymod=0
+    if (self.type==object_types.gem) ymod=4
+
+    if player:check_for_player(self.x,self.x+7,self.y+ymod,self.y+7)==1 and self.state == object_states.idle
+    then
+        self.state = object_states.invisible
+        player:add_score(score)
+        if self.type==object_types.diamond then player.diamonds+=1 else player.gems+=1 end
+        utilities:sfx(0)
+    end
+
+    -- check for collision with rocks and bombs
+    for r in all(rocks) do
+        if (r.x == self.x and r.y >= self.y and r.y < self.y+7) self.state = object_states.invisible
+    end
+    for b in all(bombs) do
+        if (b.x == self.x and b.y >= self.y and b.y < self.y+7) self.state = object_states.invisible
+    end
+end
+
+
+-- subclasses of object
+rock = object:new(
+    {
+        type = object_types.rock,
+        preparingtime = 80,
+        sprite = 71, 
+        anims = {
+            idle={fr=1,71},
+            preparing={fr=1,71,72},
+            falling={fr=1,71}
+        }
+    }
+)
+
+function rock:update()
+    self:update_faller()
+    self:check_kill()
+end
+
+function rock:draw()
+    if (self.killed==true and player.stateframes<10) return
+    spr(self.sprite,self.x,self.y)   
+end
+
+bomb = object:new(
+    {
+        type = object_types.bomb,
+        preparingtime = 60,
+        sprite = 73, 
+        anims = {
+            idle={fr=1,73},
+            preparing={fr=1,74},
+            falling={fr=1,74}
+        }
+    }
+)
+
+function bomb:update()
+    if player.incavern==0 then return end
+    self:update_faller()
+    self:check_kill()
+end
+
+diamond = object:new(
+    {
+        type = object_types.diamond,
+        sprite = 75, 
+        anims = {
+            idle={fr=4,75,76,77},
+            invisible={fr=1,255}
+        }
+    }
+)
+
+function diamond:update()
+    self:update_pickup(scores.diamond)
+end
+
+gem = object:new(
+    {
+        type = object_types.gem,
+        sprite = 86, 
+        anims = {
+            idle={fr=4,86,87,88,89},
+            invisible={fr=1,255}
+        }
+    }
+)
+
+function gem:update()
+    self:update_pickup(scores.gem)
 end
 
 player_states = {
@@ -1108,6 +1122,8 @@ player_states = {
 player={
     score=0, -- key for storing score
     lives=3, -- key for storing lives
+    demo = {},
+    demopos = 1
 }
 
 directions = {
@@ -1117,9 +1133,9 @@ directions = {
     down = 3
 }
 
+demo = "18,3,6,0,36,3,8,0,80,3,8,2,12,1,40,3,4,1,18,3,6,0,12,2,4,0,24,3,16,2,12,0,18,2,4,1,24,2,2,1,32,2,3,1,32,2,5,1,8,3,4,1,18,2,2,1,27,2,1,0,8,2,0,-1"
 function player:init()
-    self.lives = 2
-    self.score = 0
+    self.lives,self.score,self.demo,self.demopos = 2,0,split(demo),1
     self:reset()
 end
 
@@ -1144,7 +1160,7 @@ end
 function player:reset()
     self.x, self.y, self.dir, self.sprite, self.oldsprite, self.framecount, self.framestomove, self.state,
         self.stateframes, self.incavern, self.inpit, self.animframes, self.firecooldown, self.diamonds, self.gems
-        =16,16,directions.right,0,0,0,0,0,0,0,0,10,0,0,0 
+        = 16,16,directions.right,0,0,0,0,0,0,0,0,10,0,0,0 
 end
 
 -- return 1 if the player is dying
@@ -1155,7 +1171,14 @@ end
 
 -- update the player state
 function player:update_player()
+
     if (self.state==player_states.escaping) return
+
+    if self.stateframes==0 and self:is_dying()==1
+    then
+        self:lose_life()
+        return
+    end
 
     if self.state==player_states.falling
     then
@@ -1164,11 +1187,7 @@ function player:update_player()
         if self.sprite == 4 then self.sprite=5 else self.sprite=4 end
         if (self.y <= levels.pitcoords[2][2]-1) self.y+=1
         self.stateframes-=1
-        if (self.stateframes==60) sfx(4)
-        if self.stateframes==0
-            then
-                self:lose_life()
-            end
+        if (self.stateframes==60) utilities:sfx(4)
         return
     end
 
@@ -1178,10 +1197,6 @@ function player:update_player()
         -- Player is being mauled
         if self.sprite == 2 then self.sprite=0 else self.sprite=2 end
         self.stateframes-=1
-        if self.stateframes==0
-            then
-                self:lose_life()
-            end
         return
     end
 
@@ -1190,13 +1205,14 @@ function player:update_player()
         -- Player is being squashed
         if game.frame%3==0
         then
-            if self.sprite == 10 then self.sprite=11 else self.sprite=10 end
+            if self.stateframes < 10
+            then
+                self.sprite=71
+            else
+                if self.sprite == 10 then self.sprite=11 else self.sprite=10 end
+            end
             self.stateframes-=1
         end
-        if self.stateframes==0
-            then
-                self:lose_life()
-            end
         return
     end
 
@@ -1216,10 +1232,7 @@ function player:update_player()
     if (self.firecooldown<0) self.firecooldown=0
 
     -- check if we've completed the level
-    if self:check_win()==1
-    then
-        return
-    end
+    if (self:check_win()==1) return
 
     -- check if we're falling in the pit
     if (self:check_pit()==1) return;
@@ -1230,40 +1243,54 @@ function player:update_player()
         self.stateframes-=1
         if self.stateframes<0 -- Let it go at 0 for a frame to enable digging
             then
-                self.state=player_states.moving
-                self.sprite=player.oldsprite
+                self.state,self.sprite=player_states.moving,player.oldsprite
             end    
         return
     end
 
     if self.framestomove!=0
     then
-        if self.dir==directions.right then self:move(1,0,0,1,directions.right,1) end
-        if self.dir==directions.left then self:move(-1,0,2,3,directions.left,1) end
+        if self.dir==directions.right then self:move(1,0,0,1,directions.right,1) else self:move(-1,0,2,3,directions.left,1) end
         self.framestomove-=1
     else
         -- start new movement
-        local moved = 0
-        local horiz = 0
-        if btn(0) then 
-            moved=self:move(-1,0,2,3,directions.left,0)
-            horiz=1                 
-        elseif btn(1) and moved==0 then 
-            moved=self:move(1,0,0,1,directions.right,0)
-            horiz=1 
-        elseif btn(2) and moved==0 then 
-            moved=self:move(0,-1,4,5,directions.up,0) 
-        elseif btn(3) and moved==0 then 
+        local moved,horiz,dir = 0,0,-1
+
+        if (game.demo==1) 
+        then
+            dir=self.demo[self.demopos+1]
+            self.demo[self.demopos]-=1
+            if (self.demo[self.demopos]==0 and self.demopos<#self.demo-1) self.demopos+=2
+            if (btn(4)) titlescreen:init()
+        else
+            if btn(0) 
+            then    
+                dir=directions.left
+            elseif btn(1) 
+            then    
+                dir=directions.right
+            elseif btn(2) 
+            then    
+                dir=directions.up
+            elseif btn(3) 
+            then    
+                dir=directions.down
+            elseif btn(5) then self:fire()
+            end
+        end
+
+        if (dir==0) moved,horiz=self:move(1,0,0,1,directions.right),1
+        if (dir==1 and moved==0) moved,horiz=self:move(-1,0,2,3,directions.left),1
+        if (dir==2 and moved==0) moved=self:move(0,-1,4,5,directions.up) 
+        if (dir==3 and moved==0) 
+        then 
             if self.inpit==0
             then
-                moved=self:move(0,1,4,5,directions.down,0)
+                moved=self:move(0,1,4,5,directions.down)
             else
-                self.sprite=0
-                self.dir=directions.right 
+                self.sprite,self.dir=0,directions.right
             end
-        elseif btn(5) then self:fire()
         end
-        
         if moved==1 and horiz==1 then self.framestomove=7 end
     end
 
@@ -1274,8 +1301,7 @@ end
 function player:check_win()
     if self.diamonds > 0 and self.x==16 and self.y==16 
     then
-        self.state=player_states.escaping
-        game.ship.state=ship_states.escaping
+        self.state,game.ship.state=player_states.escaping,ship_states.escaping
         return 1
     end
 
@@ -1283,15 +1309,13 @@ function player:check_win()
 end
 
 function player:check_pit()
-    if (self.inpit==0) return 0
-    
     -- check if the player is falling
-    if self.x >= levels.pitcoords[1][1]+game.bridge
-    then
-        self.state=player_states.falling
-        self.stateframes=100
+    if self.inpit==1 and self.x >= levels.pitcoords[1][1]+game.bridge 
+    then 
+        self.state,self.stateframes=player_states.falling,100
         return 1
     end
+    return 0
 end
 
 function player:fire()
@@ -1304,10 +1328,16 @@ function player:fire()
     b:set_coords(self.x+xmod,self.y,self.dir)
     add(bullets,b)
     self.firecooldown=15
-    sfx(3)
+    utilities:sfx(3)
 end
 
 function player:lose_life()
+    if (game.demo==1) 
+    then
+        titlescreen:init()
+        return
+    end 
+
     self.lives-=1
 
     if self.lives < 0
@@ -1324,10 +1354,7 @@ end
 -- check for player in the range specified
 -- return 1 if found, 0 if not
 function player:check_for_player(x1,x2,y1,y2)
-    local coords1 = {x1,x2,y1,y2}
-    local coords2 = {self.x,self.x+8,self.y,self.y+8}
-
-    return utilities:check_overlap(coords1,coords2)
+    return utilities:check_overlap({x1,x2,y1,y2},{self.x,self.x+8,self.y,self.y+8})
 end
 
 function player:kill_player(state)
@@ -1396,15 +1423,13 @@ function player:try_to_dig(dir)
     if game:check_for_dirt(coords[1], coords[3], coords[2], coords[4])==1
     then
         game:dig_dirt(coords[1], coords[3], coords[2], coords[4])
-        sfx(1)
+        utilities:sfx(1)
 
         -- Update this later to just set the player state - anims handled in draw
         if self.state==player_states.moving then 
             self.oldsprite=self.sprite
         end
-        self.state=player_states.digging
-        self.stateframes=14
-        self.sprite=6+dir
+        self.state,self.stateframes,self.sprite=player_states.digging,14,6+dir
     end
 end
 
@@ -1419,7 +1444,7 @@ end
 function player:move(x,y,s1,s2,d,auto)
     
     -- only check movement if this is auto movement
-    if auto==0
+    if auto!=1
     then
         local canmove=self:check_can_move(d)
         if canmove!=1
@@ -1492,11 +1517,11 @@ robot = {
     y = 16,
     dir = directions.down,
     flipx = true,
-    sprites = {132,133,134,135},
+    sprites = split("132,133,134,135"),
     currentframe=1,
     colors={8,11,12},
     newcolors={8,11,12},
-    possiblecolors={7,8,9,10,11,12,13,14},
+    possiblecolors=split("7,8,9,10,11,12,13,14"),
     autoframes=0,
     killed=false, -- has the robot killed the player
     dying=false,
@@ -1510,20 +1535,15 @@ robot = {
     
 }
 
-function robot:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+robot = entity:new(robot)
 
 function robot:update()
 
     if self.dying == true 
     then
         -- robot has been shot - update palette, reduce frames, remove
-        self.colors = self.newcolors
-        self:generate_pallete()
+        self.colors = {self.newcolors[1],self.newcolors[2],self.newcolors[3]}
+        self.newcolors = utilities.generate_pallete(self.possiblecolors)
         self.autoframes-=1
         if (self.autoframes<0) del(game.robots,self)
         return
@@ -1539,7 +1559,7 @@ function robot:update()
     if (player:is_dying() == 1) return -- freeze all other robots
 
     -- for down and up, update every frame
-    if (game.frame%game.level.robotspeed != 0 and self.dir != directions.down and self.dir != directions.up) return
+    if (game.frame%game.settings[1] != 0 and self.dir != directions.down and self.dir != directions.up) return
     
     if self.autoframes == 0
     then
@@ -1599,10 +1619,10 @@ function robot:update()
 end
 
 function robot:draw()
-    
-    pal(self.colors[1],self.newcolors[1])
-    pal(self.colors[2],self.newcolors[2])
-    pal(self.colors[3],self.newcolors[3])
+   
+    for x=1,3 do
+        pal(self.colors[x],self.newcolors[x])
+    end 
 
     spr(self.sprites[self.currentframe], self.x, self.y, 1, 1, self.flipx )
     
@@ -1656,18 +1676,6 @@ function robot:check_can_move(dir, reversedir, moves)
     return moves
 end
 
-function robot:generate_pallete()
-    local i1,i2,i3,found = 0,0,0,0
-
-    while found == 0 do 
-        i1 = flr(rnd(#self.possiblecolors))+1
-        i2 = flr(rnd(#self.possiblecolors))+1
-        i3 = flr(rnd(#self.possiblecolors))+1
-        if (i1 != i2 and i1 != i3) found = 1
-    end
-    self.newcolors={self.possiblecolors[i1],self.possiblecolors[i2],self.possiblecolors[i3]}
-end
-
 ship_states = {
     landing = 0,
     landed = 1,
@@ -1679,19 +1687,12 @@ ship_states = {
 ship = {
     x = 12,
     y = 0,
-    sprites = {96,97},
+    sprite = 96,
     state = ship_states.landing,
-    anims={
-        {96,97},{98,99}
-    }
+    anims={96,98}
 }
 
-function ship:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+ship=entity:new(ship)
 
 function ship:update()
 
@@ -1709,6 +1710,7 @@ function ship:update()
             then
                 self.x+=1
             else
+                if (self.y==8) utilities:sfx(8)
                 if self.y < -32
                 then
                     game:next_level()
@@ -1716,7 +1718,7 @@ function ship:update()
                     self.y-=1
                 end
             end
-            if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+            if game.frame%8==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
         end
         return
     end
@@ -1725,6 +1727,7 @@ function ship:update()
     then
         if game.frame%4==0
         then
+            if (self.y==8) utilities:sfx(8)
             self.y-=1
             if self.y < -64 -- hang around for a while, to rub it in
             then
@@ -1739,23 +1742,24 @@ function ship:update()
         if (self.x > 0) 
         then
             if (game.frame%4==0) self.x-=1 
-            if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+            if game.frame%8==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
         end
         return
     end
 
     if game.frame%6==0
     then
+
+        -- play ship landing
+        if (self.y==0) utilities:sfx(7)
         self.y += 1
     end
     if self.y == 8 then self.state = ship_states.lingering end    
-    if game.frame%8==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+    if game.frame%8==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
 end
 
 function ship:draw()
-    for x=1,#self.sprites do 
-        spr(self.sprites[x], self.x+(8*x-8), self.y)
-    end
+    spr(self.sprite, self.x, self.y,2,1)
 end
 
 tank_states = {
@@ -1767,24 +1771,17 @@ tank_states = {
 tank = {
     x = 128,
     y = 8,
-    sprites = {100,101},
+    sprite = 100,
     fire_sprite = 104,
     bullet_sprite = 105,
     state = tank_states.moving,
     framesperupdate=4,
     frames=0,
     delay=120,
-    anims={
-        {100,101},{102,103}
-    }
+    anims={100,102}
 }
 
-function tank:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+tank=entity:new(tank)
 
 function tank:update()
     if self.delay > 0
@@ -1803,22 +1800,59 @@ function tank:update()
         end
         if self.x == 96 then self.state = tank_states.shooting end    
     end
-    if self.frames%4==0 then self.sprites=self.anims[1] else self.sprites=self.anims[2] end
+    if self.frames%4==0 then self.sprite=self.anims[1] else self.sprite=self.anims[2] end
 end
 
 function tank:draw()
-    for x=1,#self.sprites do 
-        spr(self.sprites[x], self.x+(8*x-8), self.y)
-    end
+    spr(self.sprite, self.x, self.y,2,1)
 
-    if game.frame % game.tickframes == 0 and self.state == tank_states.shooting and game.ship.state != ship_states.fleeing 
+    if game.frame % game.settings[3] == 0 and self.state == tank_states.shooting and game.ship.state != ship_states.fleeing 
             and game.ship.state != ship_states.escaping
     then
         -- tank is firing
         spr(65,self.x,self.y)
         spr(self.fire_sprite,self.x,self.y)
         spr(self.bullet_sprite, self.x-16,self.y)
+        utilities:sfx(9)
     end
+end
+
+congratulationsscreen = {
+    showfor=300,
+    timer=0
+}
+
+function congratulationsscreen:init()
+    -- set state functions
+    update=function ()
+        congratulationsscreen:update()
+    end
+    draw=function ()
+        congratulationsscreen:draw()
+    end
+end
+
+function congratulationsscreen:update()
+
+    if self.timer >= self.showfor then 
+        self.timer = 0
+        if player.score > 0 and player.score >= highscores[3].score
+        then
+            highscorescreen:init()
+        else
+            gameoverscreen:init()
+        end  
+    end 
+    self.timer+=1
+end
+
+function congratulationsscreen:draw()
+    cls(0)
+
+    screen:draw_scores()
+    screen:draw_highscores()
+    utilities.print_texts("congratulations!,7,12,you beat the pit,9,10,try again for a higher score,11,8")
+
 end
 
 gameoverscreen = {
@@ -1843,6 +1877,7 @@ function gameoverscreen:update()
         titlescreen:init()   
     end 
     self.timer+=1
+    
 end
 
 function gameoverscreen:draw()
@@ -1861,6 +1896,7 @@ highscorescreen = {
     initials={"a","a","a"},
     currentinitial=1,
     allchars="a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,1,2,3,4,5,6,7,8,9,0, ,!,?",
+    allcharsarray={},
     currentchar=1,
     cooldown=0
 }
@@ -1873,21 +1909,19 @@ function highscorescreen:init()
     draw=function ()
         highscorescreen:draw()
     end
-
-    self.initials = {"a","a","a"}
-    self.currentinitial = 1
-    self.currentchar = 1
-
+    
     -- determine position
+    local scorepos,scoretext=3,"3rd best"
     if player.score>highscores[1].score
     then
-        self.scorepos, self.scoretext = 1,"greatest"
+        scorepos, scoretext = 1,"greatest"
     elseif player.score>=highscores[2].score
     then
-        self.scorepos, self.scoretext = 2,"2nd best"
-    else
-        self.scorepos, self.scoretext = 3,"3rd best"
+        scorepos, scoretext = 2,"2nd best"
     end
+
+    self.allcharsarray,self.initials,self.currentinitial,self.currentchar,self.scorepos,self.scoretext = 
+        split(self.allchars),{"a","a","a"},1,1,scorepos,scoretext
 end
 
 function highscorescreen:update()
@@ -1898,23 +1932,19 @@ function highscorescreen:update()
         return
     end
 
-    local chars = split(self.allchars)
     if btn(2)
     then 
         self.currentchar+=1
-        if (self.currentchar>#chars) self.currentchar=1
-        self.initials[self.currentinitial]=chars[self.currentchar]
-        self.cooldown=10
+        if (self.currentchar>#self.allcharsarray) self.currentchar=1
+        self.initials[self.currentinitial],self.cooldown=self.allcharsarray[self.currentchar],10
     elseif btn(3) then 
         self.currentchar-=1
-        if (self.currentchar<1) self.currentchar=#chars
-        self.initials[self.currentinitial]=chars[self.currentchar]
-        self.cooldown=10
+        if (self.currentchar<1) self.curre,ntchar=#self.allcharsarray
+        self.initials[self.currentinitial],self.cooldown=self.allcharsarray[self.currentchar],10
     elseif btn(5) 
     then
         self.currentinitial+=1
-        self.currentchar=1
-        self.cooldown=30
+        self.currentchar,self.cooldown=1,30
     end
 
     if self.currentinitial > 3
@@ -1935,21 +1965,56 @@ function highscorescreen:update()
         else
             highscores[3]=score
         end
+        -- save scores
+        self:save_scores()
         gameoverscreen:init()
     end
+end
+
+function highscorescreen:load_scores()
+    -- load high score table
+    local savedscores = dget(0)
+    if (savedscores!=0)
+    then
+        self.allcharsarray=split(self.allchars)
+
+        for x=0,8,4 do
+            highscores[(x+4)/4]={
+                score=dget(x),
+                name=self.allcharsarray[dget(x+1)]..self.allcharsarray[dget(x+2)]..self.allcharsarray[dget(x+3)]
+            } 
+        end
+    end
+end
+
+function highscorescreen:save_scores()
+    local mem=0
+    for r in all(highscores) do 
+        dset(mem,r.score)
+        local namearray=self:encode_name(r.name)
+        for x=1,3 do 
+            dset(mem+x,namearray[x])
+        end
+        mem+=4
+    end
+end
+
+function highscorescreen:encode_name(name)
+    local result = {}
+    for x=1, 3 do 
+        for y=1,#self.allcharsarray do 
+            if (self.allcharsarray[y]==sub(name,x,x)) add(result,y)
+        end
+    end
+    return result
 end
 
 function highscorescreen:draw()
     cls(0)
     screen:draw_scores()
     screen:draw_highscores()
-    local linebase = 4
-    utilities.print_text("congratulations", linebase, 14)
-    utilities.print_text("player 1", linebase+2, 14)
-    utilities.print_text("you have earned", linebase+5, 8)
-    utilities.print_text("the "..self.scoretext.." score", linebase+7, 8)
-    utilities.print_text("record your initials below", linebase+9, 10)
 
+    utilities.print_texts("congratulations,4,14,player 1,6,14,you have earned,9,8,the "..self.scoretext.." score,11,8,record your initials below,13,10")
     for x=1,3 do
         local col=10
         if (self.currentinitial==x) col=11
@@ -1976,7 +2041,7 @@ function instructions:update()
 
     if self.timer >= self.showfor then 
         self.timer = 0
-        titlescreen:init() 
+        game:init_demo() 
     end 
     self.timer+=1
     
@@ -1985,25 +2050,8 @@ end
 
 function instructions:draw()
     cls(0)
-    utilities.print_text("the object", 0, 7)
-    utilities.print_text("of this game", 1, 7)
-    utilities.print_text("is to dig down", 2, 7)
-    utilities.print_text("to the bottom pit", 3, 7)
-    utilities.print_text("and", 4, 7)
-    utilities.print_text("collect at least", 5, 7)
-    utilities.print_text("one large jewel", 6, 7)
-    utilities.print_text("then", 7, 7)
-    utilities.print_text("return to ship", 8, 7)
-    utilities.print_text("thru upper pit", 9, 7)
-    utilities.print_text("single bonus "..scores.singlebonus.." points", 11, 10)
-    utilities.print_text("collect one large jewel", 12, 7)
-    utilities.print_text("and return to ship", 13, 7)
-    utilities.print_text("double bonus "..scores.doublebonus.." points", 15, 12)
-    utilities.print_text("collect all three large jewels", 16, 7)
-    utilities.print_text("or all four small jewels", 17, 7)
-    utilities.print_text("triple bonus "..scores.triplebonus.." points", 19, 8)
-    utilities.print_text("collect all seven large jewels", 20, 7)
-     
+
+    utilities.print_texts("the object, 0, 7,of this game, 1, 7,is to dig down, 2, 7,to the bottom pit, 3, 7,and, 4, 7,collect at least, 5, 7,one large jewel, 6, 7,then, 7, 7,return to ship, 8, 7,thru upper pit, 9, 7,single bonus "..scores.singlebonus.." points, 11, 10,collect one large jewel, 12, 7,and return to ship, 13, 7,double bonus "..scores.doublebonus.." points, 15, 12,collect all three large jewels, 16, 7,or all four small jewels, 17, 7,triple bonus "..scores.triplebonus.." points, 19, 8,collect all seven large jewels, 20, 7")
 end
 
 levelendscreen = {
@@ -2027,18 +2075,12 @@ function levelendscreen:init()
     -- work out score to give
     if player.diamonds==3 and player.gems==4
     then
-        self.score=scores.triplebonus
-        self.fullscore=scores.triplebonus
-        self.scoretext="triple bonus"
+        self.score,self.scoretext,self.fullscore=scores.triplebonus,"triple bonus",scores.triplebonus
     elseif player.diamonds==3
     then
-        self.score=scores.doublebonus
-        self.scoretext="double bonus"
-        self.fullscore=scores.doublebonus
+        self.score,self.scoretext,self.fullscore=scores.doublebonus,"double bonus",scores.doublebonus
     else
-        self.score=scores.singlebonus
-        self.scoretext="single bonus"
-        self.fullscore=scores.singlebonus
+        self.score,self.scoretext,self.fullscore=scores.singlebonus,"single bonus",scores.singlebonus
     end
 end
 
@@ -2046,7 +2088,12 @@ function levelendscreen:update()
 
     if self.timer >= self.showfor then 
         self.timer = 0
-        game:switchto()   
+        if game.currentlevel>8
+        then
+            congratulationsscreen:init()
+        else
+            game:switchto()  
+        end 
     end 
     if self.score==0
     then
@@ -2059,7 +2106,7 @@ function levelendscreen:update()
             if self.score<100 then toadd=self.score else toadd=100 end
             player.score+=toadd
             self.score-=toadd
-            sfx(5) 
+            utilities:sfx(5) 
         end
     end
 
@@ -2070,13 +2117,7 @@ function levelendscreen:draw()
     cls(11)
 
     screen:draw_scores()
-    local linebase = 5
-    utilities.print_text("congratulations", linebase, 1)
-    utilities.print_text("player 1", linebase+2, 1)
-    utilities.print_text("you have earned", linebase+5, 2)
-    utilities.print_text(self.scoretext, linebase+7, 10)
-    utilities.print_text(""..self.fullscore.." points", linebase+9, 2)
-    utilities.print_text("have another go", linebase+11, 8)
+    utilities.print_texts("congratulations,5,1,player 1,7,1,you have earned,10,2,"..self.scoretext..",12,10,"..self.fullscore.." points,14,2,have another go,16, 8")
 
 end
 
@@ -2093,11 +2134,11 @@ function livesscreen:init()
     draw=function ()
         livesscreen:draw()
     end
-
     if game.state==game_states.waiting
     then
         player:init()
     end
+    utilities:sfx(6)
 end
 
 function livesscreen:update()
@@ -2118,28 +2159,14 @@ function livesscreen:draw()
     cls(1)
 
     rectfill(46,11,79,17,0)
-    utilities.print_text("player 1",2,7)
-
-    if player.lives==0 
-    then
-        utilities.print_text("last man", 5, 10)
-    else
-        utilities.print_text(""..(player.lives+1).." men left", 5, 10)
-    end
+    local livestext = "last man"
+    if (player.lives != 0) livestext = ""..(player.lives+1).." men left"
+    utilities.print_texts("player 1,2,7,"..livestext..",5,10")
     
 end
 
 titlescreen = {
-    blocks = "1,3,2,3,3,3,4,3,5,3,6,3,9,3,10,3,11,3,12,3,13,3,14,3,"
-            .."2,4,6,4,13,4,"
-            .."2,5,6,5,13,5,"
-            .."2,6,3,6,4,6,5,6,6,6,13,6,"
-            .."2,7,9,7,13,7,"
-            .."2,8,13,8,"
-            .."2,9,9,9,13,9,"
-            .."2,10,9,10,13,10,"
-            .."2,11,9,11,13,11,"
-            .."2,12,9,12,13,12",
+    blocks = "1,3,2,3,3,3,4,3,5,3,6,3,9,3,10,3,11,3,12,3,13,3,14,3,2,4,6,4,13,4,2,5,6,5,13,5,2,6,3,6,4,6,5,6,6,6,13,6,2,7,9,7,13,7,2,8,13,8,2,9,9,9,13,9,2,10,9,10,13,10,2,11,9,11,13,11,2,12,9,12,13,12",
     showfor=300,
     timer=0 
 }
@@ -2152,6 +2179,8 @@ function titlescreen:init()
     draw=function ()
         titlescreen:draw()
     end
+    camera()
+    game.state=game_states.waiting
 end
 
 function titlescreen:update()
@@ -2169,18 +2198,14 @@ end
 function titlescreen:draw()
     cls(1)
 
-    local thexbase = 8
-    local theybase = 14
-    local jnrxbase = 86
-    local jnrybase = 106
+    local thexbase, theybase, jnrxbase, jnrybase = 8,14,86,106
     
-    spr(80,thexbase,theybase)
-    spr(81,thexbase+9,theybase)
-    spr(82,thexbase+18,theybase)
-
-    spr(83,jnrxbase,jnrybase)
-    spr(84,jnrxbase+9,jnrybase)
-    spr(85,jnrxbase+18,jnrybase)
+    for x=0,2 do 
+        spr(80+x,thexbase+9*x,theybase)
+    end
+    for x=0,2 do 
+        spr(83+x,jnrxbase+9*x,jnrybase)
+    end
 
     local blockarray=split(titlescreen.blocks)
     for x=1,#blockarray,2 do 
