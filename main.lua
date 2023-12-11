@@ -29,20 +29,10 @@ game_states = {
 }
 
 game = {
-    level={},
-    currentlevel=1,
     state=game_states.waiting,
-    ship={},
-    tank={},
-    monster={},
-    robots={},
-    objects={},
-    frame=0,
     mountain={10,9,8,7,6,5,4},
-    currentmountain=1,
-    currentmountaincount=0,
-    settings={},
     demo=0,
+    settings={},
     bridge=24 -- how much is the bridge extended
 }
 function game:init_demo()
@@ -170,16 +160,12 @@ function game:reset()
     self.level = levels[self.currentlevel]
     self.settings = split(self.level.settings)
 
-    -- Create a new ship and tank
-    self.ship, self.tank,self.monster,self.robots,self.bridge, self.objects,view.y = ship:new(),tank:new(), monster:new(),{},24,{},0
+    -- Reset everything
+    self.ship, self.tank,self.monster,self.robots,self.bridge, self.objects,view.y,self.frame,rocks,bombs,diamonds,gems,bullets,game.currentmountain,game.currentmountaincount
+        = ship:new(),tank:new(), monster:new(),{},24,{},0,0,{},{},{},{},{},1,0
    
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
-
-    -- Populate entities
-    rocks,bombs,diamonds,gems,bullets={},{},{},{},{}
-
-    game.currentmountain,game.currentmountaincount=1,0
 
     screen:init()
 
@@ -218,7 +204,7 @@ function game:update_timer()
     then
         self.currentmountaincount=0
         -- get the sprite above current
-        local sprite = mget(self.mountain[self.currentmountain], 0)
+        local sprite = mget(self.mountain[self.currentmountain]+screen.mapx, 0)
         if sprite==65
         then
             -- is empty, so move to next mountain
@@ -279,7 +265,7 @@ function game:check_for_dirt(x1,y1,x2,y2,bullet)
     if bullet==true
     then
         -- special case for bullets
-        if tile1.sprite==70 and sub(tile1.dirt,offset1+1,offset1+1)=="1" then return 1 end
+        if tile1 and tile1.sprite==70 and sub(tile1.dirt,offset1+1,offset1+1)=="1" then return 1 end
         return 0
     end
 
@@ -367,39 +353,40 @@ end
 
 
 
--- robotspeed,robots,tankspeed,missilespeed,bridgespeed,robotspawnrate
+-- robotspeed,robots,tankspeed,missilespeed,bridgespeed,robotspawnrate,rockwobbletime
 -- robotspeed - 1 fastest
 -- robots - number spawned at one time
 -- tankspeed - frames before next shot (divide by 60 for seconds, 28 total shots - tankspeed 60 = 28 seconds)
 -- missilespeed - percentage chance of falling per frame
 -- bridgespeed - 1 fastest
 -- robotspawnrate - frames till next spawn
+-- rock wobble time - frames that rock will wobble
 levels={
     caverncoords={{40,144},{80,184}},
     pitcoords={{8,64},{24,104}}, 
     {
-        settings="6,2,180,0.5,4,300"  
+        settings="6,2,18000,0.5,3,300,80,welcome"  
     },
     {
-        settings="5,3,180,0.6,3,300"  
+        settings="5,3,180,0.6,2,300,80,traps"  
     },
     {
-        settings="4,3,150,0.7,3,200"  
+        settings="4,3,150,0.6,2,200,80,shafts"  
     },
     {
-        settings="3,3,150,0.8,3,200"  
+        settings="3,3,150,0.6,2,200,90,chimney"  
     },
     {
-        settings="3,4,150,0.9,2,200"  
+        settings="3,4,150,0.7,1,200,80,name"  
     },
     {
-        settings="2,4,120,1.0,2,150"  
+        settings="2,4,120,1.0,1,150,80,name"  
     },
     { 
-        settings="2,4,120,1.5,1,150"  
+        settings="2,4,120,1.5,1,150,80,name"  
     },
     {
-        settings="1,4,120,0.5,1,100" 
+        settings="1,4,120,0.5,1,100,80,name" 
     }
 }
 cart_id="thepitjnrv1"
@@ -450,7 +437,8 @@ function screen:draw()
     -- draw dirt
     screen:draw_dirt()
     screen:draw_bridge()
-    if (game.demo==1) utilities.print_text("demo",3.5,12,1)
+    local name=game.demo==1 and "demo" or game.settings[8]
+    utilities.print_text(name,3.5,12,1)
 end
 
 function screen:draw_bridge()
@@ -728,9 +716,6 @@ end
 bullets = {}
 
 bullet = {
-    x = 0,
-    y = 0,
-    dir = 0,
     sprite = 14
 }
 
@@ -876,9 +861,6 @@ object_types={
 
 -- default attribute values for an "object" class
 object = {
-    x = 0,
-    y = 0,
-    sprite = 0,
     state = object_states.idle,
     time = 0,
     preparingtime=60,
@@ -1050,6 +1032,7 @@ rock = object:new(
 )
 
 function rock:update()
+    rock.preparingtime=game.settings[7]
     self:update_faller()
     self:check_kill()
 end
@@ -1073,7 +1056,7 @@ bomb = object:new(
 )
 
 function bomb:update()
-    if player.incavern==0 then return end
+    if player.incavern==0 and self.state==object_states.idle then return end
     self:update_faller()
     self:check_kill()
 end
@@ -1525,7 +1508,7 @@ robot = {
     autoframes=0,
     killed=false, -- has the robot killed the player
     dying=false,
-    alldirs=false,
+    alldirs=0,
     reversedirections = {
         directions.left,
         directions.right,
@@ -1565,29 +1548,22 @@ function robot:update()
     then
         -- figure out where the player can move
         -- {right, left, up, down}
-        local moves = self:get_moves()        
-        local reversedir = self.reversedirections[self.dir+1]
+        local moves,reversedir = self:get_moves(),self.reversedirections[self.dir+1]  
         if #moves == 1
         then
             -- just one possibility other than reverse, so take it
             self.dir = moves[1]
-            self.alldirs = false
-        elseif #moves == 2
+            self.alldirs = 0
+        elseif #moves == 2 or (#moves == 3 and self.alldirs == 0)
         then
             -- chose a random direction
             self.dir = moves[flr(rnd(#moves))+1]
-            self.alldirs = false
-        
-        elseif #moves == 3 and self.alldirs == false
-        then
-            -- chose a random direction
-            self.dir = moves[flr(rnd(#moves))+1]
-            self.alldirs = true
+            self.alldirs = #moves == 2 and 0 or 1
         elseif #moves == 0
         then
             -- can't move, so reverse
             self.dir = reversedir
-            self.alldirs = false
+            self.alldirs = 0
         end
 
         if self.dir == 0 or self.dir == 1 then self.autoframes = 7 end

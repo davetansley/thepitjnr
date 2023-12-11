@@ -29,20 +29,10 @@ game_states = {
 }
 
 game = {
-    level={},
-    currentlevel=1,
     state=game_states.waiting,
-    ship={},
-    tank={},
-    monster={},
-    robots={},
-    objects={},
-    frame=0,
     mountain={10,9,8,7,6,5,4},
-    currentmountain=1,
-    currentmountaincount=0,
-    settings={},
     demo=0,
+    settings={},
     bridge=24 -- how much is the bridge extended
 }
 function game:init_demo()
@@ -170,16 +160,12 @@ function game:reset()
     self.level = levels[self.currentlevel]
     self.settings = split(self.level.settings)
 
-    -- Create a new ship and tank
-    self.ship, self.tank,self.monster,self.robots,self.bridge, self.objects,view.y = ship:new(),tank:new(), monster:new(),{},24,{},0
+    -- Reset everything
+    self.ship, self.tank,self.monster,self.robots,self.bridge, self.objects,view.y,self.frame,rocks,bombs,diamonds,gems,bullets,game.currentmountain,game.currentmountaincount
+        = ship:new(),tank:new(), monster:new(),{},24,{},0,0,{},{},{},{},{},1,0
    
     -- reload the map
     reload(0x1000, 0x1000, 0x2000)
-
-    -- Populate entities
-    rocks,bombs,diamonds,gems,bullets={},{},{},{},{}
-
-    game.currentmountain,game.currentmountaincount=1,0
 
     screen:init()
 
@@ -218,7 +204,7 @@ function game:update_timer()
     then
         self.currentmountaincount=0
         -- get the sprite above current
-        local sprite = mget(self.mountain[self.currentmountain], 0)
+        local sprite = mget(self.mountain[self.currentmountain]+screen.mapx, 0)
         if sprite==65
         then
             -- is empty, so move to next mountain
@@ -279,7 +265,7 @@ function game:check_for_dirt(x1,y1,x2,y2,bullet)
     if bullet==true
     then
         -- special case for bullets
-        if tile1.sprite==70 and sub(tile1.dirt,offset1+1,offset1+1)=="1" then return 1 end
+        if tile1 and tile1.sprite==70 and sub(tile1.dirt,offset1+1,offset1+1)=="1" then return 1 end
         return 0
     end
 

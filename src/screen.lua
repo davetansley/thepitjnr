@@ -25,7 +25,8 @@ function screen:draw()
     -- draw dirt
     screen:draw_dirt()
     screen:draw_bridge()
-    if (game.demo==1) utilities.print_text("demo",3.5,12,1)
+    local name=game.demo==1 and "demo" or game.settings[8]
+    utilities.print_text(name,3.5,12,1)
 end
 
 function screen:draw_bridge()

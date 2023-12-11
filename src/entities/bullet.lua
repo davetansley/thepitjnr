@@ -1,9 +1,6 @@
 bullets = {}
 
 bullet = {
-    x = 0,
-    y = 0,
-    dir = 0,
     sprite = 14
 }
 

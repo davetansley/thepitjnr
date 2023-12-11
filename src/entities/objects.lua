@@ -20,9 +20,6 @@ object_types={
 
 -- default attribute values for an "object" class
 object = {
-    x = 0,
-    y = 0,
-    sprite = 0,
     state = object_states.idle,
     time = 0,
     preparingtime=60,
@@ -194,6 +191,7 @@ rock = object:new(
 )
 
 function rock:update()
+    rock.preparingtime=game.settings[7]
     self:update_faller()
     self:check_kill()
 end
@@ -217,7 +215,7 @@ bomb = object:new(
 )
 
 function bomb:update()
-    if player.incavern==0 then return end
+    if player.incavern==0 and self.state==object_states.idle then return end
     self:update_faller()
     self:check_kill()
 end

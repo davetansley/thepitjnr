@@ -11,7 +11,7 @@ robot = {
     autoframes=0,
     killed=false, -- has the robot killed the player
     dying=false,
-    alldirs=false,
+    alldirs=0,
     reversedirections = {
         directions.left,
         directions.right,
@@ -51,29 +51,22 @@ function robot:update()
     then
         -- figure out where the player can move
         -- {right, left, up, down}
-        local moves = self:get_moves()        
-        local reversedir = self.reversedirections[self.dir+1]
+        local moves,reversedir = self:get_moves(),self.reversedirections[self.dir+1]  
         if #moves == 1
         then
             -- just one possibility other than reverse, so take it
             self.dir = moves[1]
-            self.alldirs = false
-        elseif #moves == 2
+            self.alldirs = 0
+        elseif #moves == 2 or (#moves == 3 and self.alldirs == 0)
         then
             -- chose a random direction
             self.dir = moves[flr(rnd(#moves))+1]
-            self.alldirs = false
-        
-        elseif #moves == 3 and self.alldirs == false
-        then
-            -- chose a random direction
-            self.dir = moves[flr(rnd(#moves))+1]
-            self.alldirs = true
+            self.alldirs = #moves == 2 and 0 or 1
         elseif #moves == 0
         then
             -- can't move, so reverse
             self.dir = reversedir
-            self.alldirs = false
+            self.alldirs = 0
         end
 
         if self.dir == 0 or self.dir == 1 then self.autoframes = 7 end
