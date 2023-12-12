@@ -1,5 +1,5 @@
 instructions = {
-    showfor=300,
+    showfor=600,
     timer=0
 }
 
@@ -27,6 +27,7 @@ end
 function instructions:draw()
     cls(0)
 
-    utilities.print_texts("the object, 0, 7,of this game, 1, 7,is to dig down, 2, 7,to the bottom pit, 3, 7,and, 4, 7,collect at least, 5, 7,one large jewel, 6, 7,then, 7, 7,return to ship, 8, 7,thru upper pit, 9, 7,single bonus "..scores.singlebonus.." points, 11, 10,collect one large jewel, 12, 7,and return to ship, 13, 7,double bonus "..scores.doublebonus.." points, 15, 12,collect all three large jewels, 16, 7,or all four small jewels, 17, 7,triple bonus "..scores.triplebonus.." points, 19, 8,collect all seven large jewels, 20, 7")
+    utilities.print_texts("the objective of this, 0, 7,game is to dig down, 1, 7,to the bottom pit and, 2, 7,collect at least, 3, 7,one large jewel, 4, 7,then return to ship, 5, 7,thru the upper pit, 6, 7,single bonus "..scores.singlebonus.." points, 8, 10,collect one large jewel, 9, 7,double bonus "..scores.doublebonus.." points, 11, 12,collect all three large jewels, 12, 7,or all four small jewels, 13, 7,triple bonus "..scores.triplebonus.." points, 15, 8,collect all seven large jewels, 16, 7")
+    screen:draw_highscores()
 end
 

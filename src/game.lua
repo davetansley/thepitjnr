@@ -30,9 +30,7 @@ game_states = {
 
 game = {
     state=game_states.waiting,
-    mountain={10,9,8,7,6,5,4},
-    demo=0,
-    settings={},
+    mountain=split "10,9,8,7,6,5,4",
     bridge=24 -- how much is the bridge extended
 }
 function game:init_demo()

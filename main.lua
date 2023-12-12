@@ -30,9 +30,7 @@ game_states = {
 
 game = {
     state=game_states.waiting,
-    mountain={10,9,8,7,6,5,4},
-    demo=0,
-    settings={},
+    mountain=split "10,9,8,7,6,5,4",
     bridge=24 -- how much is the bridge extended
 }
 function game:init_demo()
@@ -365,28 +363,28 @@ levels={
     caverncoords={{40,144},{80,184}},
     pitcoords={{8,64},{24,104}}, 
     {
-        settings="6,2,18000,0.5,3,300,80,welcome"  
+        settings="6,2,180,0.5,3,300,80,first dig"  
     },
     {
-        settings="5,3,180,0.6,2,300,80,traps"  
+        settings="5,3,180,0.6,2,300,80,greed trap"  
     },
     {
-        settings="4,3,150,0.6,2,200,80,shafts"  
+        settings="4,3,150,0.6,2,200,80,dark shaft"  
     },
     {
-        settings="3,3,150,0.6,2,200,90,chimney"  
+        settings="3,3,150,0.6,2,200,90,rock run"  
     },
     {
-        settings="3,4,150,0.7,1,200,80,name"  
+        settings="4,2,150,0.7,2,200,80,unstable"  
     },
     {
-        settings="2,4,120,1.0,1,150,80,name"  
+        settings="4,2,150,1.0,2,150,80,plan ahead"  
     },
     { 
-        settings="2,4,120,1.5,1,150,80,name"  
+        settings="2,4,120,1.5,2,150,80,name"  
     },
     {
-        settings="1,4,120,0.5,1,100,80,name" 
+        settings="1,4,120,0.5,2,100,80,name" 
     }
 }
 cart_id="thepitjnrv1"
@@ -630,7 +628,6 @@ end
 function utilities:check_can_move(dir, coords, bullet)
 
     bullet=bullet or false
-    local result = 1
     
     -- if rock, can't move
     for r in all(rocks) do
@@ -668,7 +665,7 @@ function utilities.print_text(text, line, colour, bgcolor)
     local y=ydelta*line
     if bgcolor
     then
-        rectfill(x-4,y-2,x+w+2,y+6,bgcolor)
+        rectfill(x-1,y-1,x+w-1,y+5,bgcolor)
     end
     print(text,x,y,colour)
 end
@@ -693,6 +690,15 @@ end
 
 function utilities:sfx(sound)
     if (game.demo==0) sfx(sound)
+end
+
+function utilities:contains (tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+    return false
 end
     
 
@@ -1118,7 +1124,7 @@ directions = {
 
 demo = "18,3,6,0,36,3,8,0,80,3,8,2,12,1,40,3,4,1,18,3,6,0,12,2,4,0,24,3,16,2,12,0,18,2,4,1,24,2,2,1,32,2,3,1,32,2,5,1,8,3,4,1,18,2,2,1,27,2,1,0,8,2,0,-1"
 function player:init()
-    self.lives,self.score,self.demo,self.demopos = 2,0,split(demo),1
+    self.lives,self.score,self.demo,self.demopos = 3,0,split(demo),1
     self:reset()
 end
 
@@ -1282,7 +1288,7 @@ function player:update_player()
 end
 
 function player:check_win()
-    if self.diamonds > 0 and self.x==16 and self.y==16 
+    if (self.diamonds > 0 or self.gems == 4) and self.x==16 and self.y==16 
     then
         self.state,game.ship.state=player_states.escaping,ship_states.escaping
         return 1
@@ -1525,8 +1531,7 @@ function robot:update()
     if self.dying == true 
     then
         -- robot has been shot - update palette, reduce frames, remove
-        self.colors = {self.newcolors[1],self.newcolors[2],self.newcolors[3]}
-        self.newcolors = utilities.generate_pallete(self.possiblecolors)
+        self.colors,self.newcolors = {self.newcolors[1],self.newcolors[2],self.newcolors[3]},utilities.generate_pallete(self.possiblecolors)
         self.autoframes-=1
         if (self.autoframes<0) del(game.robots,self)
         return
@@ -1552,18 +1557,25 @@ function robot:update()
         if #moves == 1
         then
             -- just one possibility other than reverse, so take it
-            self.dir = moves[1]
-            self.alldirs = 0
+            self.dir,self.alldirs = moves[1],0
         elseif #moves == 2 or (#moves == 3 and self.alldirs == 0)
         then
-            -- chose a random direction
-            self.dir = moves[flr(rnd(#moves))+1]
+            -- favour up down
+            if utilities:contains(moves,directions.down) and rnd(10)>5
+            then
+                self.dir = directions.down 
+            elseif utilities:contains(moves,directions.up) and rnd(10)>3
+            then
+                self.dir = directions.up 
+            else
+                -- chose a random direction
+                self.dir = moves[flr(rnd(#moves))+1]
+            end
             self.alldirs = #moves == 2 and 0 or 1
         elseif #moves == 0
         then
             -- can't move, so reverse
-            self.dir = reversedir
-            self.alldirs = 0
+            self.dir,self.alldirs = reversedir,0
         end
 
         if self.dir == 0 or self.dir == 1 then self.autoframes = 7 end
@@ -1606,8 +1618,7 @@ function robot:draw()
 end
 
 function robot:die()
-    self.dying=true
-    self.autoframes=30
+    self.dying,self.autoframes=true,30
 end
 
 function robot:check_kill()
@@ -1615,10 +1626,7 @@ function robot:check_kill()
     if player:check_for_player(self.x,self.x+7,self.y,self.y+7)==1 
     then 
         player:kill_player(player_states.mauled) 
-        self.x = player.x
-        self.y = player.y
-        self.currentframe = 1
-        self.killed = true
+        self.x,self.y,self.currentframe,self.killed = player.x,player.y,1,true
     end
     
 end
@@ -1632,10 +1640,9 @@ function robot:get_moves()
     local reversedir = self.reversedirections[self.dir+1]
     local moves = {}
 
-    moves = self:check_can_move(directions.up, reversedir, moves)
-    moves = self:check_can_move(directions.down, reversedir, moves)
-    moves = self:check_can_move(directions.right, reversedir, moves)
-    moves = self:check_can_move(directions.left, reversedir, moves)
+    for x=0,3 do
+        moves = self:check_can_move(x, reversedir, moves)
+    end
 
     return moves
 end
@@ -1999,7 +2006,7 @@ function highscorescreen:draw()
 end
 
 instructions = {
-    showfor=300,
+    showfor=600,
     timer=0
 }
 
@@ -2027,7 +2034,8 @@ end
 function instructions:draw()
     cls(0)
 
-    utilities.print_texts("the object, 0, 7,of this game, 1, 7,is to dig down, 2, 7,to the bottom pit, 3, 7,and, 4, 7,collect at least, 5, 7,one large jewel, 6, 7,then, 7, 7,return to ship, 8, 7,thru upper pit, 9, 7,single bonus "..scores.singlebonus.." points, 11, 10,collect one large jewel, 12, 7,and return to ship, 13, 7,double bonus "..scores.doublebonus.." points, 15, 12,collect all three large jewels, 16, 7,or all four small jewels, 17, 7,triple bonus "..scores.triplebonus.." points, 19, 8,collect all seven large jewels, 20, 7")
+    utilities.print_texts("the objective of this, 0, 7,game is to dig down, 1, 7,to the bottom pit and, 2, 7,collect at least, 3, 7,one large jewel, 4, 7,then return to ship, 5, 7,thru the upper pit, 6, 7,single bonus "..scores.singlebonus.." points, 8, 10,collect one large jewel, 9, 7,double bonus "..scores.doublebonus.." points, 11, 12,collect all three large jewels, 12, 7,or all four small jewels, 13, 7,triple bonus "..scores.triplebonus.." points, 15, 8,collect all seven large jewels, 16, 7")
+    screen:draw_highscores()
 end
 
 levelendscreen = {
@@ -2052,7 +2060,7 @@ function levelendscreen:init()
     if player.diamonds==3 and player.gems==4
     then
         self.score,self.scoretext,self.fullscore=scores.triplebonus,"triple bonus",scores.triplebonus
-    elseif player.diamonds==3
+    elseif player.diamonds==3 or player.gems==4
     then
         self.score,self.scoretext,self.fullscore=scores.doublebonus,"double bonus",scores.doublebonus
     else

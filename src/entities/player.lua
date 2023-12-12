@@ -25,7 +25,7 @@ directions = {
 
 demo = "18,3,6,0,36,3,8,0,80,3,8,2,12,1,40,3,4,1,18,3,6,0,12,2,4,0,24,3,16,2,12,0,18,2,4,1,24,2,2,1,32,2,3,1,32,2,5,1,8,3,4,1,18,2,2,1,27,2,1,0,8,2,0,-1"
 function player:init()
-    self.lives,self.score,self.demo,self.demopos = 2,0,split(demo),1
+    self.lives,self.score,self.demo,self.demopos = 3,0,split(demo),1
     self:reset()
 end
 
@@ -189,7 +189,7 @@ function player:update_player()
 end
 
 function player:check_win()
-    if self.diamonds > 0 and self.x==16 and self.y==16 
+    if (self.diamonds > 0 or self.gems == 4) and self.x==16 and self.y==16 
     then
         self.state,game.ship.state=player_states.escaping,ship_states.escaping
         return 1

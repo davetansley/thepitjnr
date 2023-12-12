@@ -28,8 +28,7 @@ function robot:update()
     if self.dying == true 
     then
         -- robot has been shot - update palette, reduce frames, remove
-        self.colors = {self.newcolors[1],self.newcolors[2],self.newcolors[3]}
-        self.newcolors = utilities.generate_pallete(self.possiblecolors)
+        self.colors,self.newcolors = {self.newcolors[1],self.newcolors[2],self.newcolors[3]},utilities.generate_pallete(self.possiblecolors)
         self.autoframes-=1
         if (self.autoframes<0) del(game.robots,self)
         return
@@ -55,18 +54,25 @@ function robot:update()
         if #moves == 1
         then
             -- just one possibility other than reverse, so take it
-            self.dir = moves[1]
-            self.alldirs = 0
+            self.dir,self.alldirs = moves[1],0
         elseif #moves == 2 or (#moves == 3 and self.alldirs == 0)
         then
-            -- chose a random direction
-            self.dir = moves[flr(rnd(#moves))+1]
+            -- favour up down
+            if utilities:contains(moves,directions.down) and rnd(10)>5
+            then
+                self.dir = directions.down 
+            elseif utilities:contains(moves,directions.up) and rnd(10)>3
+            then
+                self.dir = directions.up 
+            else
+                -- chose a random direction
+                self.dir = moves[flr(rnd(#moves))+1]
+            end
             self.alldirs = #moves == 2 and 0 or 1
         elseif #moves == 0
         then
             -- can't move, so reverse
-            self.dir = reversedir
-            self.alldirs = 0
+            self.dir,self.alldirs = reversedir,0
         end
 
         if self.dir == 0 or self.dir == 1 then self.autoframes = 7 end
@@ -109,8 +115,7 @@ function robot:draw()
 end
 
 function robot:die()
-    self.dying=true
-    self.autoframes=30
+    self.dying,self.autoframes=true,30
 end
 
 function robot:check_kill()
@@ -118,10 +123,7 @@ function robot:check_kill()
     if player:check_for_player(self.x,self.x+7,self.y,self.y+7)==1 
     then 
         player:kill_player(player_states.mauled) 
-        self.x = player.x
-        self.y = player.y
-        self.currentframe = 1
-        self.killed = true
+        self.x,self.y,self.currentframe,self.killed = player.x,player.y,1,true
     end
     
 end
@@ -135,10 +137,9 @@ function robot:get_moves()
     local reversedir = self.reversedirections[self.dir+1]
     local moves = {}
 
-    moves = self:check_can_move(directions.up, reversedir, moves)
-    moves = self:check_can_move(directions.down, reversedir, moves)
-    moves = self:check_can_move(directions.right, reversedir, moves)
-    moves = self:check_can_move(directions.left, reversedir, moves)
+    for x=0,3 do
+        moves = self:check_can_move(x, reversedir, moves)
+    end
 
     return moves
 end

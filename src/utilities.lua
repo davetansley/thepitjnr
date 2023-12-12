@@ -75,7 +75,6 @@ end
 function utilities:check_can_move(dir, coords, bullet)
 
     bullet=bullet or false
-    local result = 1
     
     -- if rock, can't move
     for r in all(rocks) do
@@ -113,7 +112,7 @@ function utilities.print_text(text, line, colour, bgcolor)
     local y=ydelta*line
     if bgcolor
     then
-        rectfill(x-4,y-2,x+w+2,y+6,bgcolor)
+        rectfill(x-1,y-1,x+w-1,y+5,bgcolor)
     end
     print(text,x,y,colour)
 end
@@ -138,6 +137,15 @@ end
 
 function utilities:sfx(sound)
     if (game.demo==0) sfx(sound)
+end
+
+function utilities:contains (tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+    return false
 end
     
 

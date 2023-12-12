@@ -20,7 +20,7 @@ function levelendscreen:init()
     if player.diamonds==3 and player.gems==4
     then
         self.score,self.scoretext,self.fullscore=scores.triplebonus,"triple bonus",scores.triplebonus
-    elseif player.diamonds==3
+    elseif player.diamonds==3 or player.gems==4
     then
         self.score,self.scoretext,self.fullscore=scores.doublebonus,"double bonus",scores.doublebonus
     else
