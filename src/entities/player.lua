@@ -213,9 +213,7 @@ function player:fire()
 
     -- add bullet to the list
     local b = bullet:new()
-    local xmod=-8
-    if (self.dir==directions.right) xmod=8
-    b:set_coords(self.x+xmod,self.y,self.dir)
+    b:set_coords(self.x,self.y,self.dir)
     add(bullets,b)
     self.firecooldown=15
     utilities:sfx(3)
@@ -248,25 +246,21 @@ function player:check_for_player(x1,x2,y1,y2)
 end
 
 function player:kill_player(state)
-    self.state=state
-    self.stateframes=30  
+    self.state,self.stateframes=state,30
 end
 
 function player:check_location()
     -- check pit
+    self.inpit,self.incavern=0,0
     if levels.pitcoords[1][1]<=self.x and self.x<=levels.pitcoords[2][1] and levels.pitcoords[1][2]<=self.y and  self.y<levels.pitcoords[2][2]+8
     then
         self.inpit=1
-    else
-        self.inpit=0
     end
 
     -- check cavern
     if levels.caverncoords[1][1]<=self.x and self.x<levels.caverncoords[2][1]+8 and levels.caverncoords[1][2]<=self.y and  self.y<levels.caverncoords[2][2]+8
     then
         self.incavern=1
-    else
-        self.incavern=0
     end
 end
 

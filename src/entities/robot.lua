@@ -3,11 +3,11 @@ robot = {
     y = 16,
     dir = directions.down,
     flipx = true,
-    sprites = split("132,133,134,135"),
+    sprites = split "132,133,134,135",
     currentframe=1,
     colors={8,11,12},
     newcolors={8,11,12},
-    possiblecolors=split("7,8,9,10,11,12,13,14"),
+    possiblecolors=split "7,8,9,10,11,12,13,14",
     autoframes=0,
     killed=false, -- has the robot killed the player
     dying=false,
@@ -120,7 +120,7 @@ end
 
 function robot:check_kill()
     
-    if player:check_for_player(self.x,self.x+7,self.y,self.y+7)==1 
+    if player:check_for_player(self.x+2,self.x+5,self.y+2,self.y+5)==1 
     then 
         player:kill_player(player_states.mauled) 
         self.x,self.y,self.currentframe,self.killed = player.x,player.y,1,true
@@ -134,8 +134,7 @@ end
 
 -- get the directions that the robot can move in
 function robot:get_moves()
-    local reversedir = self.reversedirections[self.dir+1]
-    local moves = {}
+    local reversedir,moves = self.reversedirections[self.dir+1],{}
 
     for x=0,3 do
         moves = self:check_can_move(x, reversedir, moves)
@@ -149,7 +148,6 @@ function robot:check_can_move(dir, reversedir, moves)
     if (dir == reversedir) return moves
 
     local coords = self:get_robot_adjacent_spaces(dir)
-
     local canmove = utilities:check_can_move(dir,coords)
     if (canmove == 1) add(moves, dir)
 

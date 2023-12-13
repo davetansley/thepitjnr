@@ -11,7 +11,7 @@ ship = {
     y = 0,
     sprite = 96,
     state = ship_states.landing,
-    anims={96,98}
+    anims=split "96,98"
 }
 
 ship=entity:new(ship)

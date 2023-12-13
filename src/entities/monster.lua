@@ -8,9 +8,9 @@ monster = {
     currentframe=1,
     xmod=-1,
     ymod=-1,
-    colors={8,10,14},
-    newcolors={8,10,14},
-    possiblecolors=split("2,3,4,5,6,8,9,10,11,12,13,14,15")
+    colors=split "8,10,14",
+    newcolors=split "8,10,14",
+    possiblecolors=split "2,3,4,5,6,8,9,10,11,12,13,14,15"
 }
 
 monster=entity:new(monster)

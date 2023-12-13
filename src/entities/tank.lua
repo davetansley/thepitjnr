@@ -14,7 +14,7 @@ tank = {
     framesperupdate=4,
     frames=0,
     delay=120,
-    anims={100,102}
+    anims=split "100,102"
 }
 
 tank=entity:new(tank)

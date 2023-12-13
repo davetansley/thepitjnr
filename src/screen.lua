@@ -51,7 +51,7 @@ function screen:draw_scores()
 end
 
 function screen:draw_highscores()
-    print("best scores today",30,110+view.y,12)
+    print("best scores",40,110+view.y,12)
 
     for x=1,#highscores do 
         print(highscores[x].name.." "..utilities.pad_number(highscores[x].score),4+40*(x-1),118+view.y,8+(x-1))
@@ -138,6 +138,6 @@ end
 function screen:check_camera()
 
     -- check for need to reset camera
-    if player.y>=96 and player.state!=player_states.falling then view.y=64 end
-    if game.state==game_states.waiting or player.y<=80 then view.y=0 end
+    if player.y>=104 and player.state!=player_states.falling then view.y=64 end
+    if game.state==game_states.waiting or player.y<=88 then view.y=0 end
 end

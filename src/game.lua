@@ -30,6 +30,7 @@ game_states = {
 
 game = {
     state=game_states.waiting,
+    demo=0,
     mountain=split "10,9,8,7,6,5,4",
     bridge=24 -- how much is the bridge extended
 }
@@ -47,7 +48,7 @@ function game:start()
     self.switchto()
 
     -- config variables
-    self.currentlevel,self.highscore=7,highscores[1].score
+    self.currentlevel,self.highscore=1,highscores[1].score
     player:init()
     
     -- viewport variables
@@ -178,8 +179,6 @@ function game:next_level()
 
     self.currentlevel+=1
     levelendscreen:init()
-    player:reset()
-    self:reset()
 end
 
 function game:update_timer()

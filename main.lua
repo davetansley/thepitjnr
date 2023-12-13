@@ -1,3 +1,24 @@
+cart_id="thepitjnrv1"
+
+-- init
+function _init()
+    cartdata(cart_id)
+
+    highscorescreen:load_scores()
+
+    titlescreen:init()
+end
+
+-- update
+function _update60()
+    update()
+    --utilities:print_debug()
+end
+
+-- draw
+function _draw()
+    draw()
+end
 
 scores={
     diamond=100, -- 2000
@@ -30,6 +51,7 @@ game_states = {
 
 game = {
     state=game_states.waiting,
+    demo=0,
     mountain=split "10,9,8,7,6,5,4",
     bridge=24 -- how much is the bridge extended
 }
@@ -47,7 +69,7 @@ function game:start()
     self.switchto()
 
     -- config variables
-    self.currentlevel,self.highscore=7,highscores[1].score
+    self.currentlevel,self.highscore=1,highscores[1].score
     player:init()
     
     -- viewport variables
@@ -178,8 +200,6 @@ function game:next_level()
 
     self.currentlevel+=1
     levelendscreen:init()
-    player:reset()
-    self:reset()
 end
 
 function game:update_timer()
@@ -384,30 +404,9 @@ levels={
         settings="3,3,150,0.7,2,350,80,dirt maze"  
     },
     {
-        settings="1,4,120,0.5,2,100,80,name" 
+        settings="2,2,150,0.7,2,150,80,robo shrine" 
     }
 }
-cart_id="thepitjnrv1"
-
--- init
-function _init()
-    cartdata(cart_id)
-
-    highscorescreen:load_scores()
-
-    titlescreen:init()
-end
-
--- update
-function _update60()
-    update()
-    --utilities:print_debug()
-end
-
--- draw
-function _draw()
-    draw()
-end
 screen = {
     tiles = {},
     mapx = 0
@@ -461,7 +460,7 @@ function screen:draw_scores()
 end
 
 function screen:draw_highscores()
-    print("best scores today",30,110+view.y,12)
+    print("best scores",40,110+view.y,12)
 
     for x=1,#highscores do 
         print(highscores[x].name.." "..utilities.pad_number(highscores[x].score),4+40*(x-1),118+view.y,8+(x-1))
@@ -548,8 +547,8 @@ end
 function screen:check_camera()
 
     -- check for need to reset camera
-    if player.y>=96 and player.state!=player_states.falling then view.y=64 end
-    if game.state==game_states.waiting or player.y<=80 then view.y=0 end
+    if player.y>=104 and player.state!=player_states.falling then view.y=64 end
+    if game.state==game_states.waiting or player.y<=88 then view.y=0 end
 end
 utilities = {}
 
@@ -702,11 +701,7 @@ function utilities:contains (tab, val)
 end
     
 
-entity = {
-    x = 0,
-    y = 0,
-    sprite = 0
-} 
+entity = {} 
 
 -- the entity class constructor
 function entity:new(o) 
@@ -741,21 +736,28 @@ function bullet:update()
     end
 
     -- check if we've killed a robot
-    local coords1 = {self.x,self.x+7,self.y,self.y+7}
+    local coords1 = {self.x,self.x+7,self.y+3,self.y+3}
     for r in all(game.robots) do 
-        local coords2 = {r.x,r.x+7,r.y,r.y+7}
+        if not(r.dying)
+        then 
+            local coords2 = {r.x,r.x+7,r.y,r.y+7}
 
-        if utilities:check_overlap(coords1,coords2) == 1 
-        then
-            del(bullets, self)
-            r:die()
-            player:add_score(scores.robot)
-            return
+            if utilities:check_overlap(coords1,coords2) == 1 
+            then
+                del(bullets, self)
+                r:die()
+                player:add_score(scores.robot)
+                return
+            end
         end
     end
 
     local xmod = self.dir == directions.right and 8 or -8
     self.x+=xmod
+end
+
+function bullet:draw()
+    if(self.x!=player.x) spr(self.sprite,self.x,self.y)
 end
 
 function bullet:set_coords(x,y,dir)
@@ -771,9 +773,9 @@ monster = {
     currentframe=1,
     xmod=-1,
     ymod=-1,
-    colors={8,10,14},
-    newcolors={8,10,14},
-    possiblecolors=split("2,3,4,5,6,8,9,10,11,12,13,14,15")
+    colors=split "8,10,14",
+    newcolors=split "8,10,14",
+    possiblecolors=split "2,3,4,5,6,8,9,10,11,12,13,14,15"
 }
 
 monster=entity:new(monster)
@@ -1312,9 +1314,7 @@ function player:fire()
 
     -- add bullet to the list
     local b = bullet:new()
-    local xmod=-8
-    if (self.dir==directions.right) xmod=8
-    b:set_coords(self.x+xmod,self.y,self.dir)
+    b:set_coords(self.x,self.y,self.dir)
     add(bullets,b)
     self.firecooldown=15
     utilities:sfx(3)
@@ -1347,25 +1347,21 @@ function player:check_for_player(x1,x2,y1,y2)
 end
 
 function player:kill_player(state)
-    self.state=state
-    self.stateframes=30  
+    self.state,self.stateframes=state,30
 end
 
 function player:check_location()
     -- check pit
+    self.inpit,self.incavern=0,0
     if levels.pitcoords[1][1]<=self.x and self.x<=levels.pitcoords[2][1] and levels.pitcoords[1][2]<=self.y and  self.y<levels.pitcoords[2][2]+8
     then
         self.inpit=1
-    else
-        self.inpit=0
     end
 
     -- check cavern
     if levels.caverncoords[1][1]<=self.x and self.x<levels.caverncoords[2][1]+8 and levels.caverncoords[1][2]<=self.y and  self.y<levels.caverncoords[2][2]+8
     then
         self.incavern=1
-    else
-        self.incavern=0
     end
 end
 
@@ -1506,11 +1502,11 @@ robot = {
     y = 16,
     dir = directions.down,
     flipx = true,
-    sprites = split("132,133,134,135"),
+    sprites = split "132,133,134,135",
     currentframe=1,
     colors={8,11,12},
     newcolors={8,11,12},
-    possiblecolors=split("7,8,9,10,11,12,13,14"),
+    possiblecolors=split "7,8,9,10,11,12,13,14",
     autoframes=0,
     killed=false, -- has the robot killed the player
     dying=false,
@@ -1623,7 +1619,7 @@ end
 
 function robot:check_kill()
     
-    if player:check_for_player(self.x,self.x+7,self.y,self.y+7)==1 
+    if player:check_for_player(self.x+2,self.x+5,self.y+2,self.y+5)==1 
     then 
         player:kill_player(player_states.mauled) 
         self.x,self.y,self.currentframe,self.killed = player.x,player.y,1,true
@@ -1637,8 +1633,7 @@ end
 
 -- get the directions that the robot can move in
 function robot:get_moves()
-    local reversedir = self.reversedirections[self.dir+1]
-    local moves = {}
+    local reversedir,moves = self.reversedirections[self.dir+1],{}
 
     for x=0,3 do
         moves = self:check_can_move(x, reversedir, moves)
@@ -1652,7 +1647,6 @@ function robot:check_can_move(dir, reversedir, moves)
     if (dir == reversedir) return moves
 
     local coords = self:get_robot_adjacent_spaces(dir)
-
     local canmove = utilities:check_can_move(dir,coords)
     if (canmove == 1) add(moves, dir)
 
@@ -1672,7 +1666,7 @@ ship = {
     y = 0,
     sprite = 96,
     state = ship_states.landing,
-    anims={96,98}
+    anims=split "96,98"
 }
 
 ship=entity:new(ship)
@@ -1761,7 +1755,7 @@ tank = {
     framesperupdate=4,
     frames=0,
     delay=120,
-    anims={100,102}
+    anims=split "100,102"
 }
 
 tank=entity:new(tank)
@@ -2076,6 +2070,8 @@ function levelendscreen:update()
         then
             congratulationsscreen:init()
         else
+            player:reset()
+            game:reset()
             game:switchto()  
         end 
     end 
@@ -2182,7 +2178,7 @@ end
 function titlescreen:draw()
     cls(1)
 
-    local thexbase, theybase, jnrxbase, jnrybase = 8,14,86,106
+    local thexbase, theybase, jnrxbase, jnrybase = 8,14,95,106
     
     for x=0,2 do 
         spr(80+x,thexbase+9*x,theybase)

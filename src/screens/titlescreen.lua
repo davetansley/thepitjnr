@@ -31,7 +31,7 @@ end
 function titlescreen:draw()
     cls(1)
 
-    local thexbase, theybase, jnrxbase, jnrybase = 8,14,86,106
+    local thexbase, theybase, jnrxbase, jnrybase = 8,14,95,106
     
     for x=0,2 do 
         spr(80+x,thexbase+9*x,theybase)

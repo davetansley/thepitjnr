@@ -1,8 +1,4 @@
-entity = {
-    x = 0,
-    y = 0,
-    sprite = 0
-} 
+entity = {} 
 
 -- the entity class constructor
 function entity:new(o) 

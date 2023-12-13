@@ -31,6 +31,6 @@ levels={
         settings="3,3,150,0.7,2,350,80,dirt maze"  
     },
     {
-        settings="1,4,120,0.5,2,100,80,name" 
+        settings="2,2,150,0.7,2,150,80,robo shrine" 
     }
 }

@@ -36,6 +36,8 @@ function levelendscreen:update()
         then
             congratulationsscreen:init()
         else
+            player:reset()
+            game:reset()
             game:switchto()  
         end 
     end 

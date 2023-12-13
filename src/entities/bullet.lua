@@ -20,21 +20,28 @@ function bullet:update()
     end
 
     -- check if we've killed a robot
-    local coords1 = {self.x,self.x+7,self.y,self.y+7}
+    local coords1 = {self.x,self.x+7,self.y+3,self.y+3}
     for r in all(game.robots) do 
-        local coords2 = {r.x,r.x+7,r.y,r.y+7}
+        if not(r.dying)
+        then 
+            local coords2 = {r.x,r.x+7,r.y,r.y+7}
 
-        if utilities:check_overlap(coords1,coords2) == 1 
-        then
-            del(bullets, self)
-            r:die()
-            player:add_score(scores.robot)
-            return
+            if utilities:check_overlap(coords1,coords2) == 1 
+            then
+                del(bullets, self)
+                r:die()
+                player:add_score(scores.robot)
+                return
+            end
         end
     end
 
     local xmod = self.dir == directions.right and 8 or -8
     self.x+=xmod
+end
+
+function bullet:draw()
+    if(self.x!=player.x) spr(self.sprite,self.x,self.y)
 end
 
 function bullet:set_coords(x,y,dir)
