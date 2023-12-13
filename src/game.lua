@@ -47,7 +47,7 @@ function game:start()
     self.switchto()
 
     -- config variables
-    self.currentlevel,self.highscore=1,highscores[1].score
+    self.currentlevel,self.highscore=7,highscores[1].score
     player:init()
     
     -- viewport variables

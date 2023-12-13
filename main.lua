@@ -47,7 +47,7 @@ function game:start()
     self.switchto()
 
     -- config variables
-    self.currentlevel,self.highscore=1,highscores[1].score
+    self.currentlevel,self.highscore=7,highscores[1].score
     player:init()
     
     -- viewport variables
@@ -378,10 +378,10 @@ levels={
         settings="4,2,150,0.7,2,200,80,unstable"  
     },
     {
-        settings="4,2,150,1.0,2,150,80,plan ahead"  
+        settings="4,2,150,0.7,2,150,80,plan ahead"  
     },
     { 
-        settings="2,4,120,1.5,2,150,80,name"  
+        settings="3,3,150,0.7,2,350,80,dirt maze"  
     },
     {
         settings="1,4,120,0.5,2,100,80,name" 
