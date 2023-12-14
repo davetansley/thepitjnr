@@ -10,16 +10,16 @@ levels={
     caverncoords={{40,144},{80,184}},
     pitcoords={{8,64},{24,104}}, 
     {
-        settings="6,2,180,1,3,300,80,first dig"  
+        settings="6,2,180,0.5,3,300,80,first dig"  
     },
     {
-        settings="5,3,180,1,2,300,80,greed trap"  
+        settings="5,3,180,0.5,2,300,80,greed trap"  
     },
     {
-        settings="4,3,150,2,2,200,80,dark shaft"  
+        settings="4,3,150,1,2,200,80,dark shaft"  
     },
     {
-        settings="3,3,150,2,2,200,90,rock run"  
+        settings="3,3,150,1,2,200,90,rock run"  
     },
     {
         settings="4,2,150,3,2,200,80,unstable"  

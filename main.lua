@@ -381,16 +381,16 @@ levels={
     caverncoords={{40,144},{80,184}},
     pitcoords={{8,64},{24,104}}, 
     {
-        settings="6,2,180,1,3,300,80,first dig"  
+        settings="6,2,180,0.5,3,300,80,first dig"  
     },
     {
-        settings="5,3,180,1,2,300,80,greed trap"  
+        settings="5,3,180,0.5,2,300,80,greed trap"  
     },
     {
-        settings="4,3,150,2,2,200,80,dark shaft"  
+        settings="4,3,150,1,2,200,80,dark shaft"  
     },
     {
-        settings="3,3,150,2,2,200,90,rock run"  
+        settings="3,3,150,1,2,200,90,rock run"  
     },
     {
         settings="4,2,150,3,2,200,80,unstable"  
@@ -919,10 +919,9 @@ function object:update_faller()
         -- for bombs, check random number
         local rand,faller=rnd(60),0
         for b in all(bombs) do 
-            faller = b.state!=object_states.idle and 1 or 0
-            if (faller==1) break
+            if (b.state!=object_states.idle) faller+=1
         end
-        if rand>game.settings[4] or faller==1 then canfall=0 end
+        if rand>game.settings[4] or faller==2 then canfall=0 end
     end
     if canfall==1 and player:is_dying()==0
     then
@@ -970,7 +969,7 @@ function object:check_can_fall()
     local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
 
     -- check for an overlap with the player top line
-    if coords[2] >= player.x and player.x+7 >= coords[1] and player.y == coords[3]
+    if coords[2]-1 >= player.x and player.x+7 >= coords[1]+1 and player.y == coords[3]
     then
         return 1
     end
@@ -1169,7 +1168,7 @@ function player:update_player()
     then
         if (game.frame%1 != 0) return
         -- Player is falling
-        if self.sprite == 4 then self.sprite=5 else self.sprite=4 end
+        self.sprite = self.sprite == 4 and 5 or 4
         if (self.y <= levels.pitcoords[2][2]-1) self.y+=1
         self.stateframes-=1
         if (self.stateframes==60) utilities:sfx(4)

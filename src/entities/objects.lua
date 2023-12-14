@@ -80,10 +80,9 @@ function object:update_faller()
         -- for bombs, check random number
         local rand,faller=rnd(60),0
         for b in all(bombs) do 
-            faller = b.state!=object_states.idle and 1 or 0
-            if (faller==1) break
+            if (b.state!=object_states.idle) faller+=1
         end
-        if rand>game.settings[4] or faller==1 then canfall=0 end
+        if rand>game.settings[4] or faller==2 then canfall=0 end
     end
     if canfall==1 and player:is_dying()==0
     then
@@ -131,7 +130,7 @@ function object:check_can_fall()
     local coords = utilities:get_adjacent_spaces(directions.down, 0, self.x, self.y)
 
     -- check for an overlap with the player top line
-    if coords[2] >= player.x and player.x+7 >= coords[1] and player.y == coords[3]
+    if coords[2]-1 >= player.x and player.x+7 >= coords[1]+1 and player.y == coords[3]
     then
         return 1
     end

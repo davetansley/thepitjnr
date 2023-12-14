@@ -74,7 +74,7 @@ function player:update_player()
     then
         if (game.frame%1 != 0) return
         -- Player is falling
-        if self.sprite == 4 then self.sprite=5 else self.sprite=4 end
+        self.sprite = self.sprite == 4 and 5 or 4
         if (self.y <= levels.pitcoords[2][2]-1) self.y+=1
         self.stateframes-=1
         if (self.stateframes==60) utilities:sfx(4)
