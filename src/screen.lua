@@ -135,6 +135,6 @@ end
 
 function screen:check_camera()
     -- check for need to reset camera
-    if player.y>=104 and player.state!=player_states.falling then view.y=64 end
-    if game.state==game_states.waiting or player.y<=88 then view.y=0 end
+    if player.y>=112 and player.state!=player_states.falling then view.y=64 end
+    if game.state==game_states.waiting or player.y<=72 then view.y=0 end
 end
