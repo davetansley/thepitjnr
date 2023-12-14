@@ -12,9 +12,7 @@ end
 -- Convert box coords in pixels to cells
 -- Returns array of {x1,y1,x2,y2}
 function utilities.box_coords_to_cells(x1,y1,x2,y2)
-    local coords1 = utilities.point_coords_to_cells(x1,y1)
-    local coords2 = utilities.point_coords_to_cells(x2,y2)
-
+    local coords1,coords2 = utilities.point_coords_to_cells(x1,y1),utilities.point_coords_to_cells(x2,y2)
     return {coords1[1],coords1[2],coords2[1],coords2[2]}
 end
 
@@ -28,13 +26,10 @@ end
 -- get range of spaces adjacent to the place in the direction specified
 -- if dig is 1, get the square vertically, otherwise just 8 pixels (horiz is always a square)
 function utilities:get_adjacent_spaces(dir, dig, x, y)
-    local coords = {}
-    local ymod1 = -1
-    local ymod2 = 8
+    local coords,ymod1,ymod2 = {},-1,8
     if dig == 1
     then
-        ymod1=-8
-        ymod2=15
+        ymod1,ymod2=-8,15
     else
     end
 
@@ -78,7 +73,7 @@ function utilities:check_can_move(dir, coords, bullet)
     
     -- if rock, can't move
     for r in all(rocks) do
-        local coords2 = {r.x,r.x+8,r.y,r.y+8}
+        local coords2,overlap = {r.x,r.x+8,r.y,r.y+8}
         local overlap = utilities:check_overlap(coords,coords2)
         
         if (overlap==1) return 0
@@ -94,8 +89,8 @@ function utilities:check_can_move(dir, coords, bullet)
 
     -- if contains block or sky, can't move
     local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
-    if mget(cellcoords[1]+screen.mapx, cellcoords[2])==64 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==64 or 
-        mget(cellcoords[1]+screen.mapx, cellcoords[2])==65 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==65
+    local s1,s2=mget(cellcoords[1]+screen.mapx, cellcoords[2]),mget(cellcoords[3]+screen.mapx,cellcoords[4])
+    if s1==64 or s2==64 or s1==65 or s2==65
     then
         return 0
     end

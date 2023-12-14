@@ -233,8 +233,7 @@ function game:draw_timer()
 end
 
 function game:show_gameover()
-    self.state=game_states.waiting
-    view.y=0
+    self.state,view.y=game_states.waiting,0
     camera()
     if player.score > 0 and player.score >= highscores[3].score
     then
@@ -256,8 +255,7 @@ function game:check_for_dirt(x1,y1,x2,y2,bullet)
     -- get the top tile
     local tile1 = screen.tiles[coords[2]][coords[1]]
 
-    local offset1 = y1 % 8
-    local offset2 = (y2+1) % 8
+    local offset1,offset2 = y1 % 8,(y2+1) % 8
 
     if bullet==true
     then

@@ -1,4 +1,4 @@
-cart_id="thepitjnrv1"
+cart_id="suzukobufe"
 
 -- init
 function _init()
@@ -254,8 +254,7 @@ function game:draw_timer()
 end
 
 function game:show_gameover()
-    self.state=game_states.waiting
-    view.y=0
+    self.state,view.y=game_states.waiting,0
     camera()
     if player.score > 0 and player.score >= highscores[3].score
     then
@@ -277,8 +276,7 @@ function game:check_for_dirt(x1,y1,x2,y2,bullet)
     -- get the top tile
     local tile1 = screen.tiles[coords[2]][coords[1]]
 
-    local offset1 = y1 % 8
-    local offset2 = (y2+1) % 8
+    local offset1,offset2 = y1 % 8,(y2+1) % 8
 
     if bullet==true
     then
@@ -375,7 +373,7 @@ end
 -- robotspeed - 1 fastest
 -- robots - number spawned at one time
 -- tankspeed - frames before next shot (divide by 60 for seconds, 28 total shots - tankspeed 60 = 28 seconds)
--- missilespeed - percentage chance of falling per frame
+-- missilespeed - chance of falling per frame, out of 60
 -- bridgespeed - 1 fastest
 -- robotspawnrate - frames till next spawn
 -- rock wobble time - frames that rock will wobble
@@ -383,28 +381,28 @@ levels={
     caverncoords={{40,144},{80,184}},
     pitcoords={{8,64},{24,104}}, 
     {
-        settings="6,2,180,0.5,3,300,80,first dig"  
+        settings="6,2,180,1,3,300,80,first dig"  
     },
     {
-        settings="5,3,180,0.6,2,300,80,greed trap"  
+        settings="5,3,180,1,2,300,80,greed trap"  
     },
     {
-        settings="4,3,150,0.6,2,200,80,dark shaft"  
+        settings="4,3,150,2,2,200,80,dark shaft"  
     },
     {
-        settings="3,3,150,0.6,2,200,90,rock run"  
+        settings="3,3,150,2,2,200,90,rock run"  
     },
     {
-        settings="4,2,150,0.7,2,200,80,unstable"  
+        settings="4,2,150,3,2,200,80,unstable"  
     },
     {
-        settings="4,2,150,0.7,2,150,80,plan ahead"  
+        settings="4,2,150,3,2,150,80,plan ahead"  
     },
     { 
-        settings="3,3,150,0.7,2,350,80,dirt maze"  
+        settings="3,3,150,4,2,350,80,dirt maze"  
     },
     {
-        settings="2,2,150,0.7,2,150,80,robo shrine" 
+        settings="2,2,150,8,2,150,80,robo shrine" 
     }
 }
 screen = {
@@ -475,9 +473,7 @@ function screen:populate_map()
     for y = 0,23 do
         self.tiles[y]={}
         for x = 0,15 do
-            local sprite = mget(x+self.mapx,y)
-
-            local tile = {}
+            local sprite,tile = mget(x+self.mapx,y),{}
             tile.sprite,tile.block,tile.dirty,tile.dirt=sprite,0,0,""
             
             if sprite==71 -- rock
@@ -545,7 +541,6 @@ function screen:draw_dirt()
 end
 
 function screen:check_camera()
-
     -- check for need to reset camera
     if player.y>=104 and player.state!=player_states.falling then view.y=64 end
     if game.state==game_states.waiting or player.y<=88 then view.y=0 end
@@ -564,9 +559,7 @@ end
 -- Convert box coords in pixels to cells
 -- Returns array of {x1,y1,x2,y2}
 function utilities.box_coords_to_cells(x1,y1,x2,y2)
-    local coords1 = utilities.point_coords_to_cells(x1,y1)
-    local coords2 = utilities.point_coords_to_cells(x2,y2)
-
+    local coords1,coords2 = utilities.point_coords_to_cells(x1,y1),utilities.point_coords_to_cells(x2,y2)
     return {coords1[1],coords1[2],coords2[1],coords2[2]}
 end
 
@@ -580,13 +573,10 @@ end
 -- get range of spaces adjacent to the place in the direction specified
 -- if dig is 1, get the square vertically, otherwise just 8 pixels (horiz is always a square)
 function utilities:get_adjacent_spaces(dir, dig, x, y)
-    local coords = {}
-    local ymod1 = -1
-    local ymod2 = 8
+    local coords,ymod1,ymod2 = {},-1,8
     if dig == 1
     then
-        ymod1=-8
-        ymod2=15
+        ymod1,ymod2=-8,15
     else
     end
 
@@ -630,7 +620,7 @@ function utilities:check_can_move(dir, coords, bullet)
     
     -- if rock, can't move
     for r in all(rocks) do
-        local coords2 = {r.x,r.x+8,r.y,r.y+8}
+        local coords2,overlap = {r.x,r.x+8,r.y,r.y+8}
         local overlap = utilities:check_overlap(coords,coords2)
         
         if (overlap==1) return 0
@@ -646,8 +636,8 @@ function utilities:check_can_move(dir, coords, bullet)
 
     -- if contains block or sky, can't move
     local cellcoords = utilities.box_coords_to_cells(coords[1],coords[3],coords[2],coords[4])
-    if mget(cellcoords[1]+screen.mapx, cellcoords[2])==64 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==64 or 
-        mget(cellcoords[1]+screen.mapx, cellcoords[2])==65 or mget(cellcoords[3]+screen.mapx,cellcoords[4])==65
+    local s1,s2=mget(cellcoords[1]+screen.mapx, cellcoords[2]),mget(cellcoords[3]+screen.mapx,cellcoords[4])
+    if s1==64 or s2==64 or s1==65 or s2==65
     then
         return 0
     end
@@ -927,8 +917,12 @@ function object:update_faller()
     if self.type==object_types.bomb and self.state==object_states.idle
     then
         -- for bombs, check random number
-        local rand=rnd(100)
-        if rand>game.settings[4] then canfall=0 end
+        local rand,faller=rnd(60),0
+        for b in all(bombs) do 
+            faller = b.state!=object_states.idle and 1 or 0
+            if (faller==1) break
+        end
+        if rand>game.settings[4] or faller==1 then canfall=0 end
     end
     if canfall==1 and player:is_dying()==0
     then
@@ -1126,7 +1120,7 @@ directions = {
 
 demo = "18,3,6,0,36,3,8,0,80,3,8,2,12,1,40,3,4,1,18,3,6,0,12,2,4,0,24,3,16,2,12,0,18,2,4,1,24,2,2,1,32,2,3,1,32,2,5,1,8,3,4,1,18,2,2,1,27,2,1,0,8,2,0,-1"
 function player:init()
-    self.lives,self.score,self.demo,self.demopos = 3,0,split(demo),1
+    self.lives,self.score,self.demo,self.demopos = 3000,0,split(demo),1
     self:reset()
 end
 
@@ -1504,8 +1498,8 @@ robot = {
     flipx = true,
     sprites = split "132,133,134,135",
     currentframe=1,
-    colors={8,11,12},
-    newcolors={8,11,12},
+    colors=split "8,11,12",
+    newcolors=split "8,11,12",
     possiblecolors=split "7,8,9,10,11,12,13,14",
     autoframes=0,
     killed=false, -- has the robot killed the player

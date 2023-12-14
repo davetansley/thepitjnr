@@ -66,9 +66,7 @@ function screen:populate_map()
     for y = 0,23 do
         self.tiles[y]={}
         for x = 0,15 do
-            local sprite = mget(x+self.mapx,y)
-
-            local tile = {}
+            local sprite,tile = mget(x+self.mapx,y),{}
             tile.sprite,tile.block,tile.dirty,tile.dirt=sprite,0,0,""
             
             if sprite==71 -- rock
@@ -136,7 +134,6 @@ function screen:draw_dirt()
 end
 
 function screen:check_camera()
-
     -- check for need to reset camera
     if player.y>=104 and player.state!=player_states.falling then view.y=64 end
     if game.state==game_states.waiting or player.y<=88 then view.y=0 end

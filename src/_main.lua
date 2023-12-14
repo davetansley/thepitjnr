@@ -1,4 +1,4 @@
-cart_id="thepitjnrv1"
+cart_id="suzukobufe"
 
 -- init
 function _init()

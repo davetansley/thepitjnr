@@ -78,8 +78,12 @@ function object:update_faller()
     if self.type==object_types.bomb and self.state==object_states.idle
     then
         -- for bombs, check random number
-        local rand=rnd(100)
-        if rand>game.settings[4] then canfall=0 end
+        local rand,faller=rnd(60),0
+        for b in all(bombs) do 
+            faller = b.state!=object_states.idle and 1 or 0
+            if (faller==1) break
+        end
+        if rand>game.settings[4] or faller==1 then canfall=0 end
     end
     if canfall==1 and player:is_dying()==0
     then
