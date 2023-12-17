@@ -543,7 +543,7 @@ end
 function screen:check_camera()
     -- check for need to reset camera
     if player.y>=112 and player.state!=player_states.falling then view.y=64 end
-    if game.state==game_states.waiting or player.y<=72 then view.y=0 end
+    if game.state==game_states.waiting or player.y<=80 then view.y=0 end
 end
 utilities = {}
 
@@ -1361,6 +1361,7 @@ end
 -- check a range of pixels that the player is about to move into
 -- if can't move return 0
 -- if can move return 1
+-- if can dig return 2
 function player:check_can_move(dir)
     local result = 1
     local coords = self:get_player_adjacent_spaces(dir,0)
@@ -1389,7 +1390,7 @@ function player:check_can_move(dir)
 
     -- if contains dirt, can't move - will dig
     local dirtfound=game:check_for_dirt(coords[1],coords[3],coords[2],coords[4])
-    if (dirtfound==1) return 0
+    if (dirtfound==1) return 2
 
     -- otherwise, can move
     return 1
@@ -1425,11 +1426,14 @@ function player:move(x,y,s1,s2,d,auto)
     if auto!=1
     then
         local canmove=self:check_can_move(d)
-        if canmove!=1
+        if canmove==2
         then 
             self:try_to_dig(d)
             self.dir=d
             return 0 
+        elseif canmove==0
+        then
+            return 0
         end
     end
     self.x+=x
