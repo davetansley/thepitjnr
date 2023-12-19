@@ -25,7 +25,14 @@ function titlescreen:update()
     end 
     self.timer+=1
 
-    if (btn(5)) livesscreen:init()
+    if btn(3)
+    then
+        if btnp(4)
+        then
+            game.cheat = game.cheat==1 and 0 or 1
+        end
+    end
+    if (btnp(5)) livesscreen:init()
 end
 
 function titlescreen:draw()
@@ -46,4 +53,5 @@ function titlescreen:draw()
     end
 
     print("press ❎ to start",30,120,7)
+    if (game.cheat==1) print("cheat active",40,0,7)
 end

@@ -28,8 +28,7 @@ function gameoverscreen:draw()
 
     screen:draw_scores()
     screen:draw_highscores()
-    local linebase = 7
-    utilities.print_text("game over", linebase, 12)
+    utilities.print_text("game over", 7, 12)
 
 end
 

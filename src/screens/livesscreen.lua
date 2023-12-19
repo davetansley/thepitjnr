@@ -36,8 +36,7 @@ function livesscreen:draw()
     cls(1)
 
     rectfill(46,11,79,17,0)
-    local livestext = "last man"
-    if (player.lives != 0) livestext = ""..(player.lives+1).." men left"
+    local livestext =  player.lives == 0 and "last man" or ""..(player.lives+1).." men left"
     utilities.print_texts("player 1,2,7,"..livestext..",5,10")
     
 end

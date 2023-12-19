@@ -31,6 +31,7 @@ game_states = {
 game = {
     state=game_states.waiting,
     demo=0,
+    cheat=0,
     mountain=split "10,9,8,7,6,5,4",
     bridge=24 -- how much is the bridge extended
 }
@@ -52,9 +53,10 @@ function game:start()
     player:init()
     
     -- viewport variables
-    view={}
-    view.y=0 -- key for tracking the viewport
-
+    view={
+        y=0
+    }
+    
     self:reset()
 
     screen:init()
@@ -79,7 +81,7 @@ function game:update()
 
     -- update the ship only if needed
     self.ship:update()
-    if self.ship.state == ship_states.landing or self.ship.state == ship_states.fleeing or self.ship.state == ship_states.escaping
+    if self.ship.state != ship_states.lingering and self.ship.state != ship_states.landed
     then
         return;
     end
@@ -171,7 +173,7 @@ function game:reset()
 end
 
 function game:next_level()
-    if (self.demo==1) 
+    if self.demo==1 
     then
         titlescreen:init()
         return
@@ -221,8 +223,7 @@ function game:draw_timer()
     then
         local first = 1
         for x=8-self.currentmountaincount*2, 8, 2 do 
-            local c = 1
-            if (first == 1) c = 8
+            local c = first==1 and 8 or 1
             for y=8,15 do 
                 pset(x+8*self.mountain[self.currentmountain],y,c)
                 pset(x+8*self.mountain[self.currentmountain]+1,y,c)
@@ -284,8 +285,13 @@ end
 function game:has_dirt(tile, offset, afteroffset)
     
     for d = 1, #tile.dirt do 
-        if sub(tile.dirt,d,d)=="1" and afteroffset==1 and d>offset then return 1 end
-        if sub(tile.dirt,d,d)=="1" and afteroffset==0 and d<=offset then return 1 end
+        if sub(tile.dirt,d,d)=="1" 
+        then
+            if (afteroffset==1 and d>offset) or (afteroffset==0 and d<=offset)
+            then
+                return 1
+            end
+        end
     end
 
     return 0
@@ -297,14 +303,11 @@ function game:dig_dirt(x1,y1,x2,y2)
     local coords = utilities.box_coords_to_cells(x1,y1,x2,y2)
     
     -- get the top tile
-    local tile1 = screen.tiles[coords[2]][coords[1]]
-    local offset1 = y1 % 8
-    local offset2 = (y2+1) % 8
+    local tile1,offset1,offset2 = screen.tiles[coords[2]][coords[1]],y1 % 8,(y2+1) % 8
     
     if tile1.sprite==70 
     then
-        tile1.dirt=self:clear_dirt(tile1.dirt,offset1,1)
-        tile1.dirty=1
+        tile1.dirt,tile1.dirty=self:clear_dirt(tile1.dirt,offset1,1),1
     end 
     
     if offset1==0 then return end 
@@ -313,8 +316,7 @@ function game:dig_dirt(x1,y1,x2,y2)
     local tile2 = screen.tiles[coords[4]][coords[3]]
     if tile2.sprite==70 
     then
-        tile2.dirt=self:clear_dirt(tile2.dirt,offset2,0)
-        tile2.dirty=1
+        tile2.dirt,tile2.dirty=self:clear_dirt(tile2.dirt,offset2,0),1
     end
     
 end

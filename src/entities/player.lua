@@ -151,7 +151,7 @@ function player:update_player()
             dir=self.demo[self.demopos+1]
             self.demo[self.demopos]-=1
             if (self.demo[self.demopos]==0 and self.demopos<#self.demo-1) self.demopos+=2
-            if (btn(4)) titlescreen:init()
+            if (btn(5)) titlescreen:init()
         else
             if btn(0) 
             then    
@@ -226,7 +226,7 @@ function player:lose_life()
         return
     end 
 
-    self.lives-=1
+    if (game.cheat==0) self.lives-=1
 
     if self.lives < 0
     then

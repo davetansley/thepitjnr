@@ -3,8 +3,7 @@ highscorescreen = {
     scorepos=0,
     initials={"a","a","a"},
     currentinitial=1,
-    allchars="a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,1,2,3,4,5,6,7,8,9,0, ,!,?",
-    allcharsarray={},
+    allcharsarray=split "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,1,2,3,4,5,6,7,8,9,0, ,!,?",
     currentchar=1,
     cooldown=0
 }
@@ -28,8 +27,8 @@ function highscorescreen:init()
         scorepos, scoretext = 2,"2nd best"
     end
 
-    self.allcharsarray,self.initials,self.currentinitial,self.currentchar,self.scorepos,self.scoretext = 
-        split(self.allchars),{"a","a","a"},1,1,scorepos,scoretext
+    self.initials,self.currentinitial,self.currentchar,self.scorepos,self.scoretext = 
+        {"a","a","a"},1,1,scorepos,scoretext
 end
 
 function highscorescreen:update()
@@ -84,8 +83,6 @@ function highscorescreen:load_scores()
     local savedscores = dget(0)
     if (savedscores!=0)
     then
-        self.allcharsarray=split(self.allchars)
-
         for x=0,8,4 do
             highscores[(x+4)/4]={
                 score=dget(x),

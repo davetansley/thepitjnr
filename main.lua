@@ -52,6 +52,7 @@ game_states = {
 game = {
     state=game_states.waiting,
     demo=0,
+    cheat=0,
     mountain=split "10,9,8,7,6,5,4",
     bridge=24 -- how much is the bridge extended
 }
@@ -73,9 +74,10 @@ function game:start()
     player:init()
     
     -- viewport variables
-    view={}
-    view.y=0 -- key for tracking the viewport
-
+    view={
+        y=0
+    }
+    
     self:reset()
 
     screen:init()
@@ -100,7 +102,7 @@ function game:update()
 
     -- update the ship only if needed
     self.ship:update()
-    if self.ship.state == ship_states.landing or self.ship.state == ship_states.fleeing or self.ship.state == ship_states.escaping
+    if self.ship.state != ship_states.lingering and self.ship.state != ship_states.landed
     then
         return;
     end
@@ -192,7 +194,7 @@ function game:reset()
 end
 
 function game:next_level()
-    if (self.demo==1) 
+    if self.demo==1 
     then
         titlescreen:init()
         return
@@ -242,8 +244,7 @@ function game:draw_timer()
     then
         local first = 1
         for x=8-self.currentmountaincount*2, 8, 2 do 
-            local c = 1
-            if (first == 1) c = 8
+            local c = first==1 and 8 or 1
             for y=8,15 do 
                 pset(x+8*self.mountain[self.currentmountain],y,c)
                 pset(x+8*self.mountain[self.currentmountain]+1,y,c)
@@ -305,8 +306,13 @@ end
 function game:has_dirt(tile, offset, afteroffset)
     
     for d = 1, #tile.dirt do 
-        if sub(tile.dirt,d,d)=="1" and afteroffset==1 and d>offset then return 1 end
-        if sub(tile.dirt,d,d)=="1" and afteroffset==0 and d<=offset then return 1 end
+        if sub(tile.dirt,d,d)=="1" 
+        then
+            if (afteroffset==1 and d>offset) or (afteroffset==0 and d<=offset)
+            then
+                return 1
+            end
+        end
     end
 
     return 0
@@ -318,14 +324,11 @@ function game:dig_dirt(x1,y1,x2,y2)
     local coords = utilities.box_coords_to_cells(x1,y1,x2,y2)
     
     -- get the top tile
-    local tile1 = screen.tiles[coords[2]][coords[1]]
-    local offset1 = y1 % 8
-    local offset2 = (y2+1) % 8
+    local tile1,offset1,offset2 = screen.tiles[coords[2]][coords[1]],y1 % 8,(y2+1) % 8
     
     if tile1.sprite==70 
     then
-        tile1.dirt=self:clear_dirt(tile1.dirt,offset1,1)
-        tile1.dirty=1
+        tile1.dirt,tile1.dirty=self:clear_dirt(tile1.dirt,offset1,1),1
     end 
     
     if offset1==0 then return end 
@@ -334,8 +337,7 @@ function game:dig_dirt(x1,y1,x2,y2)
     local tile2 = screen.tiles[coords[4]][coords[3]]
     if tile2.sprite==70 
     then
-        tile2.dirt=self:clear_dirt(tile2.dirt,offset2,0)
-        tile2.dirty=1
+        tile2.dirt,tile2.dirty=self:clear_dirt(tile2.dirt,offset2,0),1
     end
     
 end
@@ -1245,7 +1247,7 @@ function player:update_player()
             dir=self.demo[self.demopos+1]
             self.demo[self.demopos]-=1
             if (self.demo[self.demopos]==0 and self.demopos<#self.demo-1) self.demopos+=2
-            if (btn(4)) titlescreen:init()
+            if (btn(5)) titlescreen:init()
         else
             if btn(0) 
             then    
@@ -1320,7 +1322,7 @@ function player:lose_life()
         return
     end 
 
-    self.lives-=1
+    if (game.cheat==0) self.lives-=1
 
     if self.lives < 0
     then
@@ -1859,8 +1861,7 @@ function gameoverscreen:draw()
 
     screen:draw_scores()
     screen:draw_highscores()
-    local linebase = 7
-    utilities.print_text("game over", linebase, 12)
+    utilities.print_text("game over", 7, 12)
 
 end
 
@@ -1869,8 +1870,7 @@ highscorescreen = {
     scorepos=0,
     initials={"a","a","a"},
     currentinitial=1,
-    allchars="a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,1,2,3,4,5,6,7,8,9,0, ,!,?",
-    allcharsarray={},
+    allcharsarray=split "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,1,2,3,4,5,6,7,8,9,0, ,!,?",
     currentchar=1,
     cooldown=0
 }
@@ -1894,8 +1894,8 @@ function highscorescreen:init()
         scorepos, scoretext = 2,"2nd best"
     end
 
-    self.allcharsarray,self.initials,self.currentinitial,self.currentchar,self.scorepos,self.scoretext = 
-        split(self.allchars),{"a","a","a"},1,1,scorepos,scoretext
+    self.initials,self.currentinitial,self.currentchar,self.scorepos,self.scoretext = 
+        {"a","a","a"},1,1,scorepos,scoretext
 end
 
 function highscorescreen:update()
@@ -1950,8 +1950,6 @@ function highscorescreen:load_scores()
     local savedscores = dget(0)
     if (savedscores!=0)
     then
-        self.allcharsarray=split(self.allchars)
-
         for x=0,8,4 do
             highscores[(x+4)/4]={
                 score=dget(x),
@@ -2136,8 +2134,7 @@ function livesscreen:draw()
     cls(1)
 
     rectfill(46,11,79,17,0)
-    local livestext = "last man"
-    if (player.lives != 0) livestext = ""..(player.lives+1).." men left"
+    local livestext =  player.lives == 0 and "last man" or ""..(player.lives+1).." men left"
     utilities.print_texts("player 1,2,7,"..livestext..",5,10")
     
 end
@@ -2169,7 +2166,14 @@ function titlescreen:update()
     end 
     self.timer+=1
 
-    if (btn(5)) livesscreen:init()
+    if btn(3)
+    then
+        if btnp(4)
+        then
+            game.cheat = game.cheat==1 and 0 or 1
+        end
+    end
+    if (btnp(5)) livesscreen:init()
 end
 
 function titlescreen:draw()
@@ -2190,4 +2194,5 @@ function titlescreen:draw()
     end
 
     print("press ❎ to start",30,120,7)
+    if (game.cheat==1) print("cheat active",40,0,7)
 end
