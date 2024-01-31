@@ -46,7 +46,7 @@ function highscorescreen:update()
         self.initials[self.currentinitial],self.cooldown=self.allcharsarray[self.currentchar],10
     elseif btn(3) then 
         self.currentchar-=1
-        if (self.currentchar<1) self.curre,ntchar=#self.allcharsarray
+        if (self.currentchar<1) self.currentchar=#self.allcharsarray
         self.initials[self.currentinitial],self.cooldown=self.allcharsarray[self.currentchar],10
     elseif btn(5) 
     then
